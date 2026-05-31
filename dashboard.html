@@ -1826,9 +1826,41 @@ window.deleteFollowup = function(id){
 window.sendReminderNow = function(id){
   const appts=JSON.parse(localStorage.getItem('appointments')||'[]');
   const a=appts.find(x=>x.id===id);
-  if(!a||!a.phone){toast('No phone number on file','error');return;}
-  toast('Reminder queued for '+a.customer_name+' 📱');
+  if(!a||!a.phone){toast('No phone number on file — add customer phone first','error');return;}
+  const msg='Hi '+a.customer_name+'! Reminder: your '+(a.type||'appointment')+' at '+(a.business_name||'us')+' is on '+a.date+' at '+a.time+'. See you soon! 👋';
+  toast('Sending reminder to '+a.customer_name+'...');
+  fetch('https://superagent-eedd9b5a.base44.app/functions/sendSms',{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({to:a.phone,message:msg,client_id:a.client_id,client_name:a.business_name,lead_name:a.customer_name})
+  }).then(r=>r.json()).then(d=>{
+    if(d.ok){toast('Reminder sent to '+a.customer_name+' ✅');}
+    else{toast('SMS error: '+(d.error||'check Twilio setup'),'error');}
+  }).catch(()=>toast('Could not send — check Twilio setup','error'));
 };
+
+// Auto-check reminders every 5 min when dashboard is open
+window._reminderInterval = window._reminderInterval || setInterval(function(){
+  const appts=JSON.parse(localStorage.getItem('appointments')||'[]');
+  const followups=JSON.parse(localStorage.getItem('followups')||'[]');
+  const pending=appts.filter(a=>a.status==='upcoming'&&a.phone);
+  const pf=followups.filter(f=>f.status==='pending'&&f.phone);
+  if(!pending.length&&!pf.length) return;
+  fetch('https://superagent-eedd9b5a.base44.app/functions/sendReminders',{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({appointments:pending,followups:pf})
+  }).then(r=>r.json()).then(d=>{
+    if(d.sent>0){
+      // Save updated states back
+      const allAppts=JSON.parse(localStorage.getItem('appointments')||'[]');
+      d.updated_appointments.forEach(u=>{const i=allAppts.findIndex(x=>x.id===u.id);if(i>-1)allAppts[i]=u;});
+      localStorage.setItem('appointments',JSON.stringify(allAppts));
+      const allF=JSON.parse(localStorage.getItem('followups')||'[]');
+      d.updated_followups.forEach(u=>{const i=allF.findIndex(x=>x.id===u.id);if(i>-1)allF[i]=u;});
+      localStorage.setItem('followups',JSON.stringify(allF));
+      toast(d.sent+' reminder(s) sent automatically 📱');
+    }
+  }).catch(()=>{});
+}, 5*60*1000);
 
 window.saveCalendlyLink = function(clientId){
   const val=document.getElementById('cal-'+clientId).value.trim();
