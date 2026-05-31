@@ -638,52 +638,47 @@ window.deleteClient = function(id){
   renderClients(document.getElementById('content'));
 };
 
-window.oneClickSetup = function(id){
-  const cl=DB.Client.get(id);
-  if(!cl) return;
-  const steps=[
-    {label:'Send welcome email',desc:`Drafting personalized welcome for ${cl.business_name}`,icon:'📧'},
-    {label:'Generate portal link',desc:`https://westferdinand-bit.github.io/client-portal/?client=${id}`,icon:'🔗'},
-    {label:'Create Google Drive folder',desc:`Folder: ${cl.business_name} — Reports, Assets, Contracts`,icon:'📁'},
-    {label:'Configure Twilio text-back',desc:`Webhook ready for ${cl.phone_number||'phone TBD'}`,icon:'📱'},
-    {label:'Flag ManyChat template',desc:'Ready to duplicate — takes ~2 min manually',icon:'🤖'},
+window.oneClickSetup = function(clientId){
+  var cl = DB.Client.get(clientId);
+  if(!cl){ toast('Client not found','error'); return; }
+  var steps = [
+    {label:'Send welcome email', desc:'Drafting personalized welcome for '+cl.business_name, icon:'📧'},
+    {label:'Generate portal link', desc:'https://westferdinand-bit.github.io/client-portal/?client='+clientId, icon:'🔗'},
+    {label:'Create Google Drive folder', desc:'Folder: '+cl.business_name+' — Reports, Assets, Contracts', icon:'📁'},
+    {label:'Configure Twilio text-back', desc:'Webhook ready for '+(cl.phone_number||'phone TBD'), icon:'📱'},
+    {label:'Flag ManyChat template', desc:'Ready to duplicate — takes ~2 min manually', icon:'🤖'},
   ];
-  let current=0;
-  function render(){
-    showModal(`<div class="modal">
-      <div class="modal-header"><div class="modal-title">⚡ One-Click Setup — ${cl.business_name}</div><button class="modal-close" onclick="closeModal()">✕</button></div>
-      <div class="modal-body">
-        <div style="margin-bottom:20px">
-          <div style="display:flex;justify-content:space-between;margin-bottom:6px">
-            <span style="font-size:12px;color:#6b7280;font-weight:600">Setup Progress</span>
-            <span style="font-size:12px;color:#6366f1;font-weight:700">${current}/${steps.length} steps</span>
-          </div>
-          <div style="height:6px;background:#f3f4fb;border-radius:99px;overflow:hidden">
-            <div style="height:100%;width:${Math.round(current/steps.length*100)}%;background:linear-gradient(90deg,#6366f1,#14b8a6);border-radius:99px;transition:width 0.4s"></div>
-          </div>
-        </div>
-        ${steps.map((s,i)=>`<div class="step-item">
-          <div class="step-num ${i<current?'done':i===current?'running':''}">${i<current?'✓':i+1}</div>
-          <div style="flex:1">
-            <div style="font-size:13px;font-weight:600;color:${i<current?'#059669':i===current?'#7c3aed':'#9aaac8'}">${s.icon} ${s.label}</div>
-            <div style="font-size:11px;color:#9aaac8;margin-top:2px">${s.desc}</div>
-          </div>
-        </div>`).join('')}
-        <div style="margin-top:20px;display:flex;gap:10px;justify-content:flex-end">
-          ${current<steps.length?`<button class="btn btn-primary" onclick="stepSetup('${id}',${current})">▶ ${current===0?'Start Setup':'Next Step'}</button>`:`<div style="text-align:center;width:100%"><div style="font-size:14px;font-weight:700;color:#059669;margin-bottom:8px">✅ Setup Complete!</div><div style="font-size:12px;color:#6b7280">Portal link: <a href="https://westferdinand-bit.github.io/client-portal/?client=${id}" target="_blank" style="color:#6366f1">Open Portal</a></div><button class="btn btn-ghost" style="margin-top:12px" onclick="closeModal()">Done</button></div>`}
-        </div>
-      </div>
-    </div>`);
-  }
-  window.stepSetup=function(id,step){
-    current=step+1;
-    render();
-    if(current===steps.length){
-      DB.Client.update(id,{status:'Active'});
-      toast('Client fully onboarded! Confetti!');
+  var current = 0;
+
+  window._setupNext = function(){
+    current++;
+    if(current >= steps.length){
+      DB.Client.update(clientId, {status:'Active'});
+      toast('Client fully onboarded! 🎉');
     }
+    renderSetupModal();
   };
-  render();
+
+  function renderSetupModal(){
+    var pct = Math.round(current/steps.length*100);
+    var stepsHtml = '';
+    for(var i=0;i<steps.length;i++){
+      var s = steps[i];
+      var numClass = i<current ? 'done' : i===current ? 'running' : '';
+      var numText = i<current ? '✓' : (i+1);
+      var labelColor = i<current ? '#059669' : i===current ? '#7c3aed' : '#9aaac8';
+      stepsHtml += '<div class="step-item"><div class="step-num '+numClass+'">'+numText+'</div><div style="flex:1"><div style="font-size:13px;font-weight:600;color:'+labelColor+'">'+s.icon+' '+s.label+'</div><div style="font-size:11px;color:#9aaac8;margin-top:2px">'+s.desc+'</div></div></div>';
+    }
+    var actionHtml = '';
+    if(current < steps.length){
+      actionHtml = '<button class="btn btn-primary" onclick="window._setupNext()">▶ '+(current===0?'Start Setup':'Next Step')+'</button>';
+    } else {
+      actionHtml = '<div style="text-align:center;width:100%"><div style="font-size:14px;font-weight:700;color:#059669;margin-bottom:8px">✅ Setup Complete!</div><div style="font-size:12px;color:#6b7280">Portal: <a href="https://westferdinand-bit.github.io/client-portal/?client='+clientId+'" target="_blank" style="color:#6366f1">Open Client Portal</a></div><button class="btn btn-ghost" style="margin-top:12px" onclick="closeModal()">Done</button></div>';
+    }
+    showModal('<div class="modal"><div class="modal-header"><div class="modal-title">⚡ One-Click Setup — '+cl.business_name+'</div><button class="modal-close" onclick="closeModal()">✕</button></div><div class="modal-body"><div style="margin-bottom:20px"><div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="font-size:12px;color:#6b7280;font-weight:600">Setup Progress</span><span style="font-size:12px;color:#6366f1;font-weight:700">'+current+'/'+steps.length+' steps</span></div><div style="height:6px;background:#f3f4fb;border-radius:99px;overflow:hidden"><div style="height:100%;width:'+pct+'%;background:linear-gradient(90deg,#6366f1,#14b8a6);border-radius:99px;transition:width 0.4s"></div></div></div>'+stepsHtml+'<div style="margin-top:20px;display:flex;gap:10px;justify-content:flex-end">'+actionHtml+'</div></div></div>');
+  }
+
+  renderSetupModal();
 };
 
 // ============================================================
