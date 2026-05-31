@@ -868,38 +868,239 @@ window.deleteLead = function(id){
 // INBOX
 // ============================================================
 function renderInbox(c){
-  const messages=DB.Message.list();
-  const inbound=messages.filter(m=>m.direction==='Inbound').length;
-  const outbound=messages.filter(m=>m.direction==='Outbound').length;
-  document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-primary btn-sm" onclick="openAddMessage()">+ Log Message</button>`;
+  const messages = DB.Message.list().sort((a,b)=>new Date(b.created_date)-new Date(a.created_date));
+  const clients  = DB.Client.list();
+
+  // Group messages into conversations by (client_id + lead_name)
+  const convMap = {};
+  messages.forEach(m=>{
+    const key = (m.client_id||m.client_name||'') + '||' + (m.lead_name||'unknown');
+    if(!convMap[key]) convMap[key]={
+      key, client_id:m.client_id, client_name:m.client_name,
+      lead_name:m.lead_name, lead_phone:m.lead_phone||'',
+      platform:m.platform, messages:[], unread:0,
+      last_message:m.content, last_time:m.created_date
+    };
+    convMap[key].messages.push(m);
+    if(m.direction==='Inbound' && m.status!=='Read') convMap[key].unread++;
+  });
+  const convs = Object.values(convMap).sort((a,b)=>new Date(b.last_time)-new Date(a.last_time));
+
+  // Filter state
+  const filter = window._inboxFilter || 'all';
+  const clientFilter = window._inboxClientFilter || '';
+  let filtered = convs;
+  if(filter!=='all') filtered = filtered.filter(c=>c.platform===filter);
+  if(clientFilter) filtered = filtered.filter(c=>c.client_name===clientFilter);
+
+  const totalUnread = convs.reduce((s,c)=>s+c.unread,0);
+  document.getElementById('topbar-actions').innerHTML=
+    `<button class="btn btn-primary btn-sm" onclick="openNewConversation()">+ New Message</button>`;
+
+  const platformColors = {'SMS':'#6366f1','Instagram DM':'#ec4899','Facebook DM':'#2563eb','Email':'#0d9488','Phone Call':'#d97706'};
+  const platformIcons  = {'SMS':'💬','Instagram DM':'📸','Facebook DM':'👤','Email':'📧','Phone Call':'📞'};
 
   c.innerHTML=`
-  <div class="grid-3" style="margin-bottom:24px">
+  <style>
+    .conv-row{display:flex;align-items:flex-start;gap:12px;padding:14px 16px;border-bottom:1px solid #f3f4fb;cursor:pointer;transition:background .15s}
+    .conv-row:hover{background:#f8f9ff}
+    .conv-row.unread-row{background:#fafbff}
+    .conv-avatar{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;flex-shrink:0;color:#fff}
+    .inbox-sidebar{background:#fff;border-radius:16px;border:1px solid #eef0f8;overflow:hidden}
+    .thread-box{background:#fff;border-radius:16px;border:1px solid #eef0f8;display:flex;flex-direction:column}
+    .msg-bubble{max-width:72%;padding:10px 14px;border-radius:16px;font-size:13px;line-height:1.5;margin-bottom:8px}
+    .msg-out{background:#6366f1;color:#fff;border-radius:16px 16px 4px 16px;align-self:flex-end}
+    .msg-in{background:#f3f4fb;color:#1e293b;border-radius:16px 16px 16px 4px;align-self:flex-start}
+    .reply-bar{border-top:1px solid #f3f4fb;padding:12px 16px;display:flex;gap:10px;align-items:flex-end}
+    .reply-input{flex:1;border:1.5px solid #e5e7eb;border-radius:12px;padding:10px 14px;font-size:13px;font-family:inherit;resize:none;outline:none;max-height:120px}
+    .reply-input:focus{border-color:#6366f1}
+  </style>
+
+  <!-- Stats row -->
+  <div class="grid-3" style="margin-bottom:20px">
     ${[
-      {label:'Total Messages',val:messages.length,color:'#6366f1',bg:'rgba(99,102,241,0.1)',icon:'💬'},
-      {label:'Inbound',val:inbound,color:'#0d9488',bg:'rgba(20,184,166,0.1)',icon:'📥'},
-      {label:'Outbound',val:outbound,color:'#d97706',bg:'rgba(245,158,11,0.1)',icon:'📤'},
+      {label:'All Conversations',val:convs.length,color:'#6366f1',bg:'rgba(99,102,241,0.1)',icon:'💬'},
+      {label:'Unread',val:totalUnread,color:'#ef4444',bg:'rgba(239,68,68,0.1)',icon:'🔴'},
+      {label:'Clients Connected',val:new Set(convs.map(c=>c.client_name)).size,color:'#0d9488',bg:'rgba(20,184,166,0.1)',icon:'🏢'},
     ].map(s=>`<div class="card stat-card">
       <div class="stat-icon" style="background:${s.bg}">${s.icon}</div>
       <div class="stat-value" style="color:${s.color}">${s.val}</div>
       <div class="stat-label">${s.label}</div>
     </div>`).join('')}
   </div>
-  <div class="card card-p">
-    <div class="section-header"><div class="section-title">Message Log</div></div>
-    ${messages.length===0?`<div class="empty"><div class="empty-icon">💬</div><div class="empty-title">No messages yet</div><div class="empty-sub">Log your first client message</div></div>`:`
-    <table class="tbl"><thead><tr><th>Client</th><th>Lead</th><th>Platform</th><th>Direction</th><th>Message</th><th>Date</th></tr></thead><tbody>
-    ${messages.map(m=>`<tr>
-      <td style="font-weight:600">${m.client_name||'—'}</td>
-      <td style="font-size:12px">${m.lead_name||'—'}</td>
-      <td><span class="badge" style="background:#f3f4fb;color:#6b7280">${m.platform||'—'}</span></td>
-      <td>${m.direction==='Inbound'?`<span class="badge" style="background:rgba(20,184,166,0.1);color:#0d9488">↓ Inbound</span>`:`<span class="badge" style="background:rgba(245,158,11,0.1);color:#d97706">↑ Outbound</span>`}</td>
-      <td style="font-size:12px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${m.content||'—'}</td>
-      <td style="font-size:11px;color:#9aaac8">${fmt(m.created_date)}</td>
-    </tr>`).join('')}
-    </tbody></table>`}
+
+  <!-- Filter bar -->
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center">
+    ${['all','SMS','Instagram DM','Facebook DM','Email'].map(p=>
+      `<button onclick="window._inboxFilter='${p}';renderInbox(document.getElementById('content'))"
+        style="padding:6px 14px;border-radius:20px;border:1.5px solid ${filter===p?'#6366f1':'#e5e7eb'};
+        background:${filter===p?'#6366f1':'#fff'};color:${filter===p?'#fff':'#6b7280'};
+        font-size:12px;font-weight:600;cursor:pointer">
+        ${p==='all'?'All':platformIcons[p]+' '+p}
+      </button>`
+    ).join('')}
+    <select onchange="window._inboxClientFilter=this.value;renderInbox(document.getElementById('content'))"
+      style="margin-left:auto;padding:6px 12px;border-radius:8px;border:1.5px solid #e5e7eb;font-size:12px;color:#374151;background:#fff;cursor:pointer">
+      <option value="">All Clients</option>
+      ${clients.map(cl=>`<option value="${cl.business_name}" ${clientFilter===cl.business_name?'selected':''}>${cl.business_name}</option>`).join('')}
+    </select>
+  </div>
+
+  <!-- Conversation list -->
+  <div class="inbox-sidebar">
+    ${filtered.length===0
+      ?`<div class="empty" style="padding:48px"><div class="empty-icon">💬</div><div class="empty-title">No conversations yet</div><div class="empty-sub">Messages from SMS, Instagram, and Facebook will appear here</div></div>`
+      :filtered.map(conv=>{
+        const initials=(conv.lead_name||'?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+        const color=platformColors[conv.platform]||'#6366f1';
+        const icon=platformIcons[conv.platform]||'💬';
+        const timeAgo=conv.last_time?timeSince(conv.last_time):'';
+        return `<div class="conv-row ${conv.unread>0?'unread-row':''}" onclick="openConversation('${conv.key.replace(/'/g,"\'")}')">
+          <div class="conv-avatar" style="background:${color}">${initials}</div>
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div style="font-weight:${conv.unread>0?'800':'600'};font-size:14px;color:#1e293b">${conv.lead_name||'Unknown'}</div>
+              <div style="font-size:11px;color:#9aaac8">${timeAgo}</div>
+            </div>
+            <div style="font-size:12px;color:#6b7280;margin-top:1px">${conv.client_name||''} · <span style="color:${color}">${icon} ${conv.platform||''}</span></div>
+            <div style="font-size:12px;color:${conv.unread>0?'#1e293b':'#9aaac8'};margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:${conv.unread>0?'600':'400'}">${conv.last_message||''}</div>
+          </div>
+          ${conv.unread>0?`<div style="width:8px;height:8px;border-radius:50%;background:#ef4444;flex-shrink:0;margin-top:6px"></div>`:''}
+        </div>`;
+      }).join('')
+    }
   </div>`;
 }
+
+function timeSince(dateStr){
+  const diff=Date.now()-new Date(dateStr).getTime();
+  const m=Math.floor(diff/60000);
+  if(m<1) return 'just now';
+  if(m<60) return m+'m ago';
+  const h=Math.floor(m/60);
+  if(h<24) return h+'h ago';
+  const d=Math.floor(h/24);
+  return d+'d ago';
+}
+
+window.openConversation = function(key){
+  const messages = DB.Message.list().sort((a,b)=>new Date(a.created_date)-new Date(b.created_date));
+  const convMap = {};
+  messages.forEach(m=>{
+    const k=(m.client_id||m.client_name||'')+'||'+(m.lead_name||'unknown');
+    if(!convMap[k]) convMap[k]={key:k,client_id:m.client_id,client_name:m.client_name,lead_name:m.lead_name,lead_phone:m.lead_phone||'',platform:m.platform,messages:[]};
+    convMap[k].messages.push(m);
+  });
+  const conv=convMap[key];
+  if(!conv){toast('Conversation not found','error');return;}
+  const platformColors={'SMS':'#6366f1','Instagram DM':'#ec4899','Facebook DM':'#2563eb','Email':'#0d9488','Phone Call':'#d97706'};
+  const platformIcons={'SMS':'💬','Instagram DM':'📸','Facebook DM':'👤','Email':'📧','Phone Call':'📞'};
+  const color=platformColors[conv.platform]||'#6366f1';
+  const icon=platformIcons[conv.platform]||'💬';
+  const canReply = conv.platform==='SMS' && conv.lead_phone;
+
+  showModal(`<div class="modal" style="max-width:560px;width:100%">
+    <div class="modal-header">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="width:36px;height:36px;border-radius:50%;background:${color};display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;color:#fff">${(conv.lead_name||'?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2)}</div>
+        <div>
+          <div style="font-weight:700;font-size:15px;color:#1e293b">${conv.lead_name||'Unknown'}</div>
+          <div style="font-size:12px;color:#9aaac8">${conv.client_name} · ${icon} ${conv.platform}${conv.lead_phone?' · '+conv.lead_phone:''}</div>
+        </div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" style="padding:0">
+      <!-- Thread -->
+      <div style="display:flex;flex-direction:column;padding:16px;gap:4px;max-height:340px;overflow-y:auto;background:#f8f9ff" id="thread-scroll">
+        ${conv.messages.map(m=>`
+          <div style="display:flex;flex-direction:column;align-items:${m.direction==='Outbound'?'flex-end':'flex-start'}">
+            <div class="msg-bubble ${m.direction==='Outbound'?'msg-out':'msg-in'}">${m.content||''}</div>
+            <div style="font-size:10px;color:#c0c9d8;margin-bottom:4px;margin-top:-4px;padding:0 4px">${fmt(m.created_date)}</div>
+          </div>`).join('')}
+      </div>
+      <!-- Reply bar -->
+      ${canReply?`
+      <div class="reply-bar">
+        <textarea class="reply-input" id="reply-text" rows="2" placeholder="Reply via SMS..."></textarea>
+        <button onclick="sendReply('${conv.client_id||''}','${conv.client_name||''}','${conv.lead_name||''}','${conv.lead_phone||''}','${conv.platform||''}')"
+          style="background:#6366f1;color:#fff;border:none;border-radius:10px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer;flex-shrink:0">Send</button>
+      </div>`:`
+      <div style="padding:12px 16px;background:#fafafa;border-top:1px solid #f3f4fb;text-align:center;font-size:12px;color:#9aaac8">
+        ${conv.platform==='SMS'&&!conv.lead_phone?'Add a phone number to this lead to enable replies':'Replies via '+conv.platform+' coming soon'}
+      </div>`}
+    </div>
+  </div>`);
+  // Auto-scroll thread to bottom
+  setTimeout(()=>{const el=document.getElementById('thread-scroll');if(el)el.scrollTop=el.scrollHeight;},50);
+};
+
+window.sendReply = function(clientId, clientName, leadName, leadPhone, platform){
+  const text=document.getElementById('reply-text').value.trim();
+  if(!text){toast('Type a message first','error');return;}
+  if(platform!=='SMS'){toast('Only SMS replies supported right now','error');return;}
+  toast('Sending...');
+  fetch('https://superagent-eedd9b5a.base44.app/functions/sendSms',{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({to:leadPhone,message:text,client_id:clientId,client_name:clientName,lead_name:leadName,type:'reply'})
+  }).then(r=>r.json()).then(d=>{
+    if(d.ok){
+      closeModal();
+      toast('Reply sent ✅');
+      setTimeout(()=>renderInbox(document.getElementById('content')),400);
+    } else {
+      toast('Send failed: '+(d.error||'check Twilio'),'error');
+    }
+  }).catch(()=>toast('Network error','error'));
+};
+
+window.openNewConversation = function(){
+  const clients=DB.Client.list();
+  showModal(`<div class="modal">
+    <div class="modal-header"><div class="modal-title">New Message</div><button class="modal-close" onclick="closeModal()">✕</button></div>
+    <div class="modal-body">
+      <div class="form-group"><label class="form-label">Client</label>
+        <select class="form-select" id="mf-client"><option value="">Select…</option>${clients.map(cl=>`<option value="${cl.id}">${cl.business_name}</option>`).join('')}</select>
+      </div>
+      <div class="form-group"><label class="form-label">Customer Name</label><input class="form-input" id="mf-lead" placeholder="Who are you messaging?"/></div>
+      <div class="form-group"><label class="form-label">Phone Number</label><input class="form-input" id="mf-phone" type="tel" placeholder="(212) 555-0100"/></div>
+      <div class="form-group"><label class="form-label">Platform</label>
+        <select class="form-select" id="mf-platform"><option>SMS</option><option>Instagram DM</option><option>Facebook DM</option><option>Email</option></select>
+      </div>
+      <div class="form-group"><label class="form-label">Message</label><textarea class="form-textarea" id="mf-content" rows="3" placeholder="Type your message…"></textarea></div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:6px">
+        <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="sendNewMessage()">Send</button>
+      </div>
+    </div>
+  </div>`);
+};
+
+window.sendNewMessage = function(){
+  const clientId=document.getElementById('mf-client').value;
+  const clients=DB.Client.list();
+  const client=clients.find(c=>c.id===clientId);
+  const leadName=document.getElementById('mf-lead').value.trim();
+  const phone=document.getElementById('mf-phone').value.trim();
+  const platform=document.getElementById('mf-platform').value;
+  const content=document.getElementById('mf-content').value.trim();
+  if(!clientId||!leadName||!content){toast('Fill in client, name and message','error');return;}
+  if(platform==='SMS'&&!phone){toast('Phone number required for SMS','error');return;}
+  if(platform==='SMS'){
+    toast('Sending SMS...');
+    fetch('https://superagent-eedd9b5a.base44.app/functions/sendSms',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({to:phone,message:content,client_id:clientId,client_name:client?.business_name||'',lead_name:leadName,type:'manual'})
+    }).then(r=>r.json()).then(d=>{
+      if(d.ok){closeModal();toast('SMS sent ✅');setTimeout(()=>renderInbox(document.getElementById('content')),400);}
+      else{toast('SMS error: '+(d.error||'check Twilio'),'error');}
+    }).catch(()=>toast('Network error','error'));
+  } else {
+    DB.Message.create({client_id:clientId,client_name:client?.business_name||'',lead_name:leadName,lead_phone:phone,platform,direction:'Outbound',content,status:'Sent'});
+    closeModal();toast('Message logged ✅');
+    renderInbox(document.getElementById('content'));
+  }
+};
 
 window.openAddMessage = function(){
   const clients=DB.Client.list();
