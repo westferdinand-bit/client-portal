@@ -1510,8 +1510,17 @@ window.saveGoals = function(){
 // ============================================================
 
 function renderAppointments(c){
-  const appts = DB.Appointment ? DB.Appointment.list() : JSON.parse(localStorage.getItem('appointments')||'[]');
+  // Load from real DB + localStorage followups
   const followups = JSON.parse(localStorage.getItem('followups')||'[]');
+  // Fetch real appointments from API
+  fetch('https://base44.app/api/apps/6a1b5820c74ffab0eedd9b5a/entities/Appointment/filter',{
+    method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})
+  }).then(r=>r.json()).then(data=>{
+    const appts=Array.isArray(data)?data:(data.items||[]);
+    _renderAppointmentsInner(c,appts,followups);
+  }).catch(()=>_renderAppointmentsInner(c,[],followups));
+}
+function _renderAppointmentsInner(c, appts, followups){
 
   c.innerHTML=`
   <div style="max-width:800px">
@@ -1753,12 +1762,17 @@ window.saveAppt = function(){
   const notes=document.getElementById('am-notes').value.trim();
   if(!name||!date||!time){toast('Name, date and time are required','error');return;}
   const client = clientId ? DB.Client.get(clientId) : null;
-  const appts = JSON.parse(localStorage.getItem('appointments')||'[]');
-  appts.push({id:Date.now().toString(),customer_name:name,phone,date,time,type,notes,status:'upcoming',business_name:client?client.business_name:'',client_id:clientId,created:new Date().toISOString()});
-  localStorage.setItem('appointments',JSON.stringify(appts));
-  document.getElementById('appt-modal').style.display='none';
-  toast('Appointment saved! Reminders will fire automatically ✅');
-  navigate('appointments');
+  toast('Saving appointment...');
+  fetch('https://base44.app/api/apps/6a1b5820c74ffab0eedd9b5a/entities/Appointment',{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({client_id:clientId,business_name:client?client.business_name:'',customer_name:name,customer_phone:phone,date,time,type,notes,status:'upcoming',added_by:'agency',reminded_24h:false,reminded_1h:false})
+  }).then(r=>r.json()).then(d=>{
+    if(d.id){
+      document.getElementById('appt-modal').style.display='none';
+      toast('Appointment saved! Reminders will fire automatically ✅');
+      navigate('appointments');
+    } else { toast('Could not save — try again','error'); }
+  }).catch(()=>toast('Network error saving appointment','error'));
 };
 
 window.saveFollowup = function(){
@@ -1794,11 +1808,10 @@ window.advanceFollowup = function(id){
 };
 
 window.markApptDone = function(id){
-  const appts=JSON.parse(localStorage.getItem('appointments')||'[]');
-  const a=appts.find(x=>x.id===id); if(a) a.status='completed';
-  localStorage.setItem('appointments',JSON.stringify(appts));
-  toast('Appointment marked complete ✅');
-  navigate('appointments');
+  fetch('https://base44.app/api/apps/6a1b5820c74ffab0eedd9b5a/entities/Appointment/'+id,{
+    method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:'completed'})
+  }).then(()=>{toast('Appointment marked complete ✅');navigate('appointments');})
+  .catch(()=>toast('Could not update','error'));
 };
 
 window.markFollowupDone = function(id){
@@ -1811,9 +1824,9 @@ window.markFollowupDone = function(id){
 
 window.deleteAppt = function(id){
   if(!confirm('Delete this appointment?')) return;
-  const appts=JSON.parse(localStorage.getItem('appointments')||'[]').filter(x=>x.id!==id);
-  localStorage.setItem('appointments',JSON.stringify(appts));
-  toast('Deleted'); navigate('appointments');
+  fetch('https://base44.app/api/apps/6a1b5820c74ffab0eedd9b5a/entities/Appointment/'+id,{method:'DELETE'})
+    .then(()=>{toast('Deleted');navigate('appointments');})
+    .catch(()=>toast('Could not delete','error'));
 };
 
 window.deleteFollowup = function(id){
