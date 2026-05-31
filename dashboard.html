@@ -1534,6 +1534,7 @@ function _renderAppointmentsInner(c, appts, followups){
       <div style="display:flex;gap:8px">
         <button class="btn btn-primary btn-sm" onclick="openApptModal()">+ Appointment</button>
         <button class="btn btn-ghost btn-sm" onclick="openFollowupModal()">+ Follow-Up</button>
+        <button class="btn btn-ghost btn-sm" onclick="syncGCal()" title="Sync Google Calendar">📅 Sync GCal</button>
       </div>
     </div>
 
@@ -1874,6 +1875,23 @@ window._reminderInterval = window._reminderInterval || setInterval(function(){
     }
   }).catch(()=>{});
 }, 5*60*1000);
+
+window.syncGCal = function(clientId){
+  const btn = event.target;
+  btn.textContent = '⏳ Syncing...';
+  btn.disabled = true;
+  const payload = clientId ? {client_id: clientId} : {};
+  fetch('https://superagent-eedd9b5a.base44.app/functions/syncGoogleCalendar',{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(payload)
+  }).then(r=>r.json()).then(d=>{
+    btn.textContent='📅 Sync GCal'; btn.disabled=false;
+    if(d.ok){
+      toast(d.message || 'Calendar synced ✅');
+      navigate('appointments');
+    } else { toast('Sync error: '+(d.error||'unknown'),'error'); }
+  }).catch(()=>{btn.textContent='📅 Sync GCal';btn.disabled=false;toast('Could not reach sync function','error');});
+};
 
 window.saveCalendlyLink = function(clientId){
   const val=document.getElementById('cal-'+clientId).value.trim();
