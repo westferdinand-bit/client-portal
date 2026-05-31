@@ -1819,10 +1819,41 @@ window.advanceFollowup = function(id){
 };
 
 window.markApptDone = function(id){
-  fetch('https://base44.app/api/apps/6a1b5820c74ffab0eedd9b5a/entities/Appointment/'+id,{
+  const API='https://base44.app/api/apps/6a1b5820c74ffab0eedd9b5a/entities';
+  // Mark appointment complete
+  fetch(API+'/Appointment/'+id,{
     method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:'completed'})
-  }).then(()=>{toast('Appointment marked complete ✅');navigate('appointments');})
-  .catch(()=>toast('Could not update','error'));
+  }).then(r=>r.json()).then(appt=>{
+    toast('Appointment complete ✅ — sending review request...');
+    // Auto-create ReviewRequest record
+    const rrData={
+      client_id: appt.client_id||'',
+      client_name: appt.business_name||'',
+      customer_name: appt.customer_name||'',
+      customer_phone: appt.customer_phone||'',
+      status: 'Pending',
+      platform: 'SMS',
+      review_link: '',
+    };
+    return fetch(API+'/ReviewRequest',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(rrData)
+    }).then(r=>r.json()).then(rr=>{
+      if(!rr.id){toast('Appointment done ✅ (no phone — review skipped)');navigate('appointments');return;}
+      // Fire the review request text
+      return fetch('https://superagent-eedd9b5a.base44.app/functions/sendReviewRequest',{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({review_request_id:rr.id})
+      }).then(r=>r.json()).then(d=>{
+        if(d.ok&&d.results&&d.results[0]&&d.results[0].sent){
+          toast('✅ Done! Review request sent to '+appt.customer_name);
+        } else {
+          toast('Appointment done ✅ (review text needs Twilio setup)');
+        }
+        navigate('appointments');
+      });
+    });
+  }).catch(()=>toast('Could not update','error'));
 };
 
 window.markFollowupDone = function(id){
