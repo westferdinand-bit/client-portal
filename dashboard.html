@@ -1145,41 +1145,77 @@ window.saveMessage = function(){
 // ============================================================
 // REVIEW REQUESTS
 // ============================================================
+function statusBadge(status){
+  const map={
+    'Pending':    {bg:'rgba(245,158,11,0.1)',  color:'#d97706', label:'⏳ Pending'},
+    'Sent':       {bg:'rgba(99,102,241,0.1)',   color:'#6366f1', label:'📤 Sent'},
+    'FollowupSent':{bg:'rgba(59,130,246,0.1)', color:'#2563eb', label:'🔁 Follow-up Sent'},
+    'Completed':  {bg:'rgba(16,185,129,0.1)',   color:'#059669', label:'✅ Reviewed'},
+    'Failed':     {bg:'rgba(239,68,68,0.1)',    color:'#ef4444', label:'❌ Failed'},
+  };
+  const s=map[status]||{bg:'#f3f4fb',color:'#6b7280',label:status||'—'};
+  return `<span class="badge" style="background:${s.bg};color:${s.color};font-weight:700">${s.label}</span>`;
+}
+
 function renderReviews(c){
-  const reviews=DB.ReviewRequest.list();
+  const reviews=DB.ReviewRequest.list().sort((a,b)=>new Date(b.created_date)-new Date(a.created_date));
   const clients=DB.Client.list();
   document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-primary btn-sm" onclick="openAddReview()">+ Send Review Request</button>`;
+
+  const sent=reviews.filter(x=>['Sent','FollowupSent'].includes(x.status)).length;
+  const completed=reviews.filter(x=>x.status==='Completed').length;
+  const failed=reviews.filter(x=>x.status==='Failed').length;
+  const convRate=sent>0?Math.round((completed/reviews.length)*100):0;
 
   c.innerHTML=`
   <div class="grid-3" style="margin-bottom:24px">
     ${[
-      {label:'Pending',val:reviews.filter(x=>x.status==='Pending').length,color:'#d97706',bg:'rgba(245,158,11,0.1)',icon:'⏳'},
-      {label:'Completed',val:reviews.filter(x=>x.status==='Completed').length,color:'#059669',bg:'rgba(16,185,129,0.1)',icon:'✅'},
-      {label:'Total Sent',val:reviews.length,color:'#6366f1',bg:'rgba(99,102,241,0.1)',icon:'⭐'},
+      {label:'Texts Delivered',val:sent,color:'#6366f1',bg:'rgba(99,102,241,0.1)',icon:'📤'},
+      {label:'Reviews Collected',val:completed,color:'#059669',bg:'rgba(16,185,129,0.1)',icon:'⭐'},
+      {label:'Conversion Rate',val:convRate+'%',color:'#d97706',bg:'rgba(245,158,11,0.1)',icon:'📈'},
     ].map(s=>`<div class="card stat-card">
       <div class="stat-icon" style="background:${s.bg}">${s.icon}</div>
       <div class="stat-value" style="color:${s.color}">${s.val}</div>
       <div class="stat-label">${s.label}</div>
     </div>`).join('')}
   </div>
+
+  <!-- How it works banner -->
+  <div class="card" style="background:linear-gradient(135deg,#f0f4ff,#e8f0fe);border:1px solid #c7d2fe;padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;gap:14px">
+    <div style="font-size:28px">⚡</div>
+    <div>
+      <div style="font-weight:700;font-size:13px;color:#3730a3">Fully Automatic — Zero Manual Work</div>
+      <div style="font-size:12px;color:#6366f1;margin-top:2px;line-height:1.5">Mark any appointment <strong>Done</strong> → review text fires instantly → 3-day follow-up sends automatically. Every result logs here in real time.</div>
+    </div>
+  </div>
+
   <div class="card card-p">
-    <div class="section-header"><div class="section-title">Review Requests</div></div>
-    ${reviews.length===0?`<div class="empty"><div class="empty-icon">⭐</div><div class="empty-title">No review requests yet</div><div class="empty-sub">Send your first review request to build social proof</div></div>`:`
-    <table class="tbl"><thead><tr><th>Client</th><th>Customer</th><th>Platform</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead><tbody>
-    ${reviews.map(r=>`<tr>
-      <td style="font-weight:600">${r.client_name||'—'}</td>
-      <td>${r.customer_name||'—'}<div style="font-size:11px;color:#9aaac8">${r.customer_phone||''}</div></td>
-      <td><span class="badge" style="background:#f3f4fb;color:#6b7280">${r.platform||'—'}</span></td>
-      <td>${r.status==='Completed'?`<span class="badge" style="background:rgba(16,185,129,0.1);color:#059669">✅ Completed</span>`:`<span class="badge" style="background:rgba(245,158,11,0.1);color:#d97706">⏳ Pending</span>`}</td>
-      <td style="font-size:11px;color:#9aaac8">${fmt(r.created_date)}</td>
-      <td>
-        <div style="display:flex;gap:6px">
-          ${r.status==='Pending'?`<button class="btn btn-sm" style="background:rgba(16,185,129,0.1);color:#059669" onclick="markReviewDone('${r.id}')">✓ Done</button>`:''}
-          <button class="btn btn-danger btn-sm" onclick="deleteReview('${r.id}')">✕</button>
-        </div>
-      </td>
-    </tr>`).join('')}
-    </tbody></table>`}
+    <div class="section-header">
+      <div class="section-title">All Review Requests</div>
+      ${failed>0?`<span style="font-size:12px;color:#ef4444;font-weight:600">⚠️ ${failed} failed — check Twilio setup</span>`:''}
+    </div>
+    ${reviews.length===0
+      ?`<div class="empty"><div class="empty-icon">⭐</div><div class="empty-title">No review requests yet</div><div class="empty-sub">Mark an appointment as Done and a review request fires automatically</div></div>`
+      :`<div style="overflow-x:auto">
+      <table class="tbl"><thead><tr><th>Customer</th><th>Client</th><th>Phone</th><th>Status</th><th>Sent</th><th>Actions</th></tr></thead><tbody>
+      ${reviews.map(r=>`<tr>
+        <td style="font-weight:700">${r.customer_name||'—'}</td>
+        <td style="font-size:12px;color:#6b7280">${r.client_name||'—'}</td>
+        <td style="font-size:12px">${r.customer_phone||'—'}</td>
+        <td>${statusBadge(r.status)}</td>
+        <td style="font-size:11px;color:#9aaac8">${fmt(r.created_date)}</td>
+        <td>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            ${r.status==='Sent'||r.status==='FollowupSent'?`<button class="btn btn-sm" style="background:rgba(16,185,129,0.1);color:#059669;font-size:11px" onclick="markReviewDone('${r.id}')">✅ Got Review</button>`:''}
+            ${r.status==='Completed'?`<span style="font-size:11px;color:#059669;font-weight:600">⭐ Reviewed</span>`:''}
+            ${r.status==='Failed'?`<button class="btn btn-sm" style="background:rgba(99,102,241,0.1);color:#6366f1;font-size:11px" onclick="retrySendReview('${r.id}')">🔄 Retry</button>`:''}
+            ${r.status==='Pending'?`<button class="btn btn-sm" style="background:rgba(99,102,241,0.1);color:#6366f1;font-size:11px" onclick="retrySendReview('${r.id}')">📤 Send Now</button>`:''}
+            <button class="btn btn-danger btn-sm" onclick="deleteReview('${r.id}')" style="font-size:11px">✕</button>
+          </div>
+        </td>
+      </tr>`).join('')}
+      </tbody></table></div>`
+    }
   </div>`;
 }
 
@@ -1189,46 +1225,76 @@ window.openAddReview = function(){
     <div class="modal-header"><div class="modal-title">Send Review Request</div><button class="modal-close" onclick="closeModal()">✕</button></div>
     <div class="modal-body">
       <div class="form-group"><label class="form-label">Client Business</label>
-        <select class="form-select" id="rf-client"><option value="">Select…</option>${clients.map(cl=>`<option>${cl.business_name}</option>`).join('')}</select>
+        <select class="form-select" id="rf-client"><option value="">Select…</option>${clients.map(cl=>`<option value="${cl.id}">${cl.business_name}</option>`).join('')}</select>
       </div>
       <div class="form-group"><label class="form-label">Customer Name</label><input class="form-input" id="rf-name" placeholder="e.g. John Smith"/></div>
       <div class="form-group"><label class="form-label">Customer Phone</label><input class="form-input" id="rf-phone" placeholder="(212) 555-0100"/></div>
-      <div class="form-group"><label class="form-label">Platform</label>
-        <select class="form-select" id="rf-platform"><option>Google</option><option>Yelp</option><option>Facebook</option><option>TripAdvisor</option></select>
-      </div>
-      <div class="form-group"><label class="form-label">Review Link (optional)</label><input class="form-input" id="rf-link" placeholder="https://g.page/…"/></div>
+      <div class="form-group"><label class="form-label">Review Link (optional)</label><input class="form-input" id="rf-link" placeholder="https://g.page/r/…"/></div>
       <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:6px">
         <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-        <button class="btn btn-primary" onclick="saveReview()">Send Request</button>
+        <button class="btn btn-primary" id="rf-save-btn" onclick="saveReview()">📤 Send Now</button>
       </div>
     </div>
   </div>`);
 };
 
 window.saveReview = function(){
-  DB.ReviewRequest.create({
-    client_name:document.getElementById('rf-client').value,
-    customer_name:document.getElementById('rf-name').value.trim(),
-    customer_phone:document.getElementById('rf-phone').value.trim(),
-    platform:document.getElementById('rf-platform').value,
-    review_link:document.getElementById('rf-link').value.trim(),
-    status:'Pending',
-  });
-  closeModal();
-  toast('Review request sent ✅');
-  renderReviews(document.getElementById('content'));
+  const clientId=document.getElementById('rf-client').value;
+  const clients=DB.Client.list();
+  const client=clients.find(c=>c.id===clientId);
+  const name=document.getElementById('rf-name').value.trim();
+  const phone=document.getElementById('rf-phone').value.trim();
+  const link=document.getElementById('rf-link').value.trim();
+  if(!clientId||!name||!phone){toast('Fill in client, name and phone','error');return;}
+  const btn=document.getElementById('rf-save-btn');
+  btn.textContent='Sending...';btn.disabled=true;
+  const rrData={client_id:clientId,client_name:client?.business_name||'',customer_name:name,customer_phone:phone,review_link:link,status:'Pending',platform:'SMS'};
+  fetch('https://base44.app/api/apps/6a1b5820c74ffab0eedd9b5a/entities/ReviewRequest',{
+    method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(rrData)
+  }).then(r=>r.json()).then(rr=>{
+    if(!rr.id){toast('Could not create request','error');btn.textContent='📤 Send Now';btn.disabled=false;return;}
+    return fetch('https://superagent-eedd9b5a.base44.app/functions/sendReviewRequest',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({review_request_id:rr.id})
+    }).then(r=>r.json()).then(d=>{
+      closeModal();
+      if(d.ok&&d.results&&d.results[0]&&d.results[0].sent){
+        toast('✅ Review request sent to '+name+' at '+phone);
+      } else {
+        toast('Created but text failed — check Twilio setup','error');
+      }
+      renderReviews(document.getElementById('content'));
+    });
+  }).catch(()=>{toast('Network error','error');btn.textContent='📤 Send Now';btn.disabled=false;});
+};
+
+window.retrySendReview = function(id){
+  toast('Sending...');
+  fetch('https://superagent-eedd9b5a.base44.app/functions/sendReviewRequest',{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({review_request_id:id})
+  }).then(r=>r.json()).then(d=>{
+    if(d.ok&&d.results&&d.results[0]&&d.results[0].sent){
+      toast('✅ Review request sent!');
+    } else {
+      toast('Send failed — check Twilio setup','error');
+    }
+    renderReviews(document.getElementById('content'));
+  }).catch(()=>toast('Network error','error'));
 };
 
 window.markReviewDone = function(id){
-  DB.ReviewRequest.update(id,{status:'Completed'});
-  toast('Marked as completed ⭐');
-  renderReviews(document.getElementById('content'));
+  fetch('https://base44.app/api/apps/6a1b5820c74ffab0eedd9b5a/entities/ReviewRequest/'+id,{
+    method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:'Completed'})
+  }).then(()=>{toast('⭐ Marked as reviewed!');renderReviews(document.getElementById('content'));})
+  .catch(()=>toast('Could not update','error'));
 };
 
 window.deleteReview = function(id){
   if(!confirm('Delete this review request?')) return;
-  DB.ReviewRequest.delete(id);
-  renderReviews(document.getElementById('content'));
+  fetch('https://base44.app/api/apps/6a1b5820c74ffab0eedd9b5a/entities/ReviewRequest/'+id,{method:'DELETE'})
+    .then(()=>{toast('Deleted');renderReviews(document.getElementById('content'));})
+    .catch(()=>toast('Could not delete','error'));
 };
 
 // ============================================================
