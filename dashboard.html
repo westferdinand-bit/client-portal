@@ -564,6 +564,7 @@ window.openAddClient = function(){
 window.saveNewClient = function(){
   const bname=document.getElementById('f-bname').value.trim();
   if(!bname){ toast('Business name is required','error'); return; }
+  var slug = bname.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
   DB.Client.create({
     business_name:bname,
     owner_name:document.getElementById('f-oname').value.trim(),
@@ -573,6 +574,7 @@ window.saveNewClient = function(){
     package:document.getElementById('f-pkg').value,
     status:document.getElementById('f-status').value,
     notes:document.getElementById('f-notes').value.trim(),
+    slug:slug,
   });
   closeModal();
   toast('Client added! ✅');
@@ -643,7 +645,7 @@ window.oneClickSetup = function(clientId){
   if(!cl){ toast('Client not found','error'); return; }
   var steps = [
     {label:'Send welcome email', desc:'Drafting personalized welcome for '+cl.business_name, icon:'📧'},
-    {label:'Generate portal link', desc:'https://westferdinand-bit.github.io/client-portal/?client='+clientId, icon:'🔗'},
+    {label:'Generate portal link', desc:'https://westferdinand-bit.github.io/client-portal/?client='+(cl.slug||clientId), icon:'🔗'},
     {label:'Create Google Drive folder', desc:'Folder: '+cl.business_name+' — Reports, Assets, Contracts', icon:'📁'},
     {label:'Configure Twilio text-back', desc:'Webhook ready for '+(cl.phone_number||'phone TBD'), icon:'📱'},
     {label:'Flag ManyChat template', desc:'Ready to duplicate — takes ~2 min manually', icon:'🤖'},
@@ -673,7 +675,8 @@ window.oneClickSetup = function(clientId){
     if(current < steps.length){
       actionHtml = '<button class="btn btn-primary" onclick="window._setupNext()">▶ '+(current===0?'Start Setup':'Next Step')+'</button>';
     } else {
-      actionHtml = '<div style="text-align:center;width:100%"><div style="font-size:14px;font-weight:700;color:#059669;margin-bottom:8px">✅ Setup Complete!</div><div style="font-size:12px;color:#6b7280">Portal: <a href="https://westferdinand-bit.github.io/client-portal/?client='+clientId+'" target="_blank" style="color:#6366f1">Open Client Portal</a></div><button class="btn btn-ghost" style="margin-top:12px" onclick="closeModal()">Done</button></div>';
+      var portalSlug = cl.slug || clientId;
+      actionHtml = '<div style="text-align:center;width:100%"><div style="font-size:14px;font-weight:700;color:#059669;margin-bottom:8px">✅ Setup Complete!</div><div style="font-size:12px;color:#6b7280">Portal: <a href="https://westferdinand-bit.github.io/client-portal/?client='+portalSlug+'" target="_blank" style="color:#6366f1">Open Client Portal</a></div><button class="btn btn-ghost" style="margin-top:12px" onclick="closeModal()">Done</button></div>';
     }
     showModal('<div class="modal"><div class="modal-header"><div class="modal-title">⚡ One-Click Setup — '+cl.business_name+'</div><button class="modal-close" onclick="closeModal()">✕</button></div><div class="modal-body"><div style="margin-bottom:20px"><div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="font-size:12px;color:#6b7280;font-weight:600">Setup Progress</span><span style="font-size:12px;color:#6366f1;font-weight:700">'+current+'/'+steps.length+' steps</span></div><div style="height:6px;background:#f3f4fb;border-radius:99px;overflow:hidden"><div style="height:100%;width:'+pct+'%;background:linear-gradient(90deg,#6366f1,#14b8a6);border-radius:99px;transition:width 0.4s"></div></div></div>'+stepsHtml+'<div style="margin-top:20px;display:flex;gap:10px;justify-content:flex-end">'+actionHtml+'</div></div></div>');
   }
