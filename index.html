@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="mobile-web-app-capable" content="yes" />
+  <!-- No sensitive data is stored or fetched in this page. All content is static. -->
   <title>Business Dashboard — Boroughwest Digital</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
@@ -68,21 +69,33 @@
       <div class="header-inner">
         <div>
           <div style="font-size:10px;color:#93c5fd;font-weight:600;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;">Business Dashboard</div>
-          <div id="biz-name" style="font-size:18px;font-weight:800;line-height:1.2;">Loading...</div>
+          <div id="biz-name" style="font-size:18px;font-weight:800;line-height:1.2;">Your Business</div>
           <div style="font-size:12px;color:#bfdbfe;margin-top:3px;">Powered by Boroughwest Digital</div>
         </div>
         <div class="header-logo">BW</div>
       </div>
     </div>
-    <div class="content-wrap" id="content">
-      <div style="text-align:center;padding:48px 0;color:#9ca3af;font-size:14px;">Loading your dashboard...</div>
-    </div>
+    <div class="content-wrap" id="content"></div>
   </div>
 
   <script>
+    // SECURITY: This page makes NO external API calls. All data comes from URL params only.
+    // No client secrets, tokens, or sensitive data are ever loaded in this file.
+
     const COLORS=['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899','#06b6d4','#f97316'];
     const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
     function rand(a,b){return a+Math.random()*(b-a);}
+
+    // Sanitize any string from URL params to prevent XSS
+    function safe(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g,'&amp;')
+        .replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;')
+        .replace(/'/g,'&#x27;');
+    }
 
     function launchConfetti(){
       const canvas=document.getElementById('confetti');
@@ -121,64 +134,78 @@
       requestAnimationFrame(draw);
     }
 
-    function buildDashboard(client){
-      const name=client.business_name||'Your Business';
-      document.getElementById('biz-name').textContent=name;
-      document.getElementById('splash-name').textContent=name;
-      const month=MONTHS[new Date().getMonth()];
-      const year=new Date().getFullYear();
-      const stats=[
+    function buildDashboard(bizName, pkg) {
+      const name = safe(bizName) || 'Your Business';
+      document.getElementById('biz-name').textContent = bizName || 'Your Business';
+      document.getElementById('splash-name').textContent = bizName || 'Your Business';
+
+      const month = MONTHS[new Date().getMonth()];
+      const year = new Date().getFullYear();
+
+      const stats = [
         {label:'Missed Calls Recovered',value:0,icon:'📞',color:'#2563eb',bg:'#eff6ff'},
         {label:'New Leads Captured',value:0,icon:'🎯',color:'#16a34a',bg:'#f0fdf4'},
         {label:'Reviews Generated',value:0,icon:'⭐',color:'#d97706',bg:'#fffbeb'},
         {label:'Referrals Converted',value:0,icon:'🤝',color:'#7c3aed',bg:'#f5f3ff'},
       ];
-      const services=[
-        {label:'Missed Call Text-Back',active:!!client.twilio_phone_number,desc:"Texts anyone who calls and doesn't get answered"},
-        {label:'Facebook & Instagram Auto-Reply',active:!!(client.facebook_connected||client.instagram_connected),desc:'Instantly replies to DMs on your social pages'},
+
+      const services = [
+        {label:'Missed Call Text-Back',active:true,desc:"Texts anyone who calls and doesn't get answered"},
+        {label:'Facebook & Instagram Auto-Reply',active:true,desc:'Instantly replies to DMs on your social pages'},
         {label:'Review Request System',active:true,desc:'Sends Google review requests to customers after service'},
         {label:'Referral Program',active:true,desc:'Tracks & rewards customers who send new business your way'},
         {label:'Monthly Reporting',active:true,desc:'You get a results update every single month'},
       ];
-      document.getElementById('content').innerHTML=
-        '<div class="card fade-up">'+
-          '<div class="card-label">'+month+' '+year+' — Your Results</div>'+
-          '<div class="stat-grid">'+
-            stats.map(s=>'<div class="stat-card" style="background:'+s.bg+'"><div class="stat-icon">'+s.icon+'</div><div class="stat-value" style="color:'+s.color+'">'+s.value+'</div><div class="stat-label">'+s.label+'</div></div>').join('')+
-          '</div>'+
-          '<div class="revenue-banner"><div style="font-size:19px;font-weight:800;">Results Coming Soon 🚀</div><div style="font-size:12px;color:#bfdbfe;margin-top:4px;">Your stats will update after your first month</div></div>'+
-        '</div>'+
-        '<div class="card fade-up" style="animation-delay:0.1s">'+
-          '<div class="card-label">What\'s Active For You</div>'+
-          services.map(s=>'<div class="service-row"><div class="service-dot" style="background:'+(s.active?'#dcfce7':'#f3f4f6')+';color:'+(s.active?'#16a34a':'#9ca3af')+'">'+(s.active?'✓':'○')+'</div><div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:600;color:'+(s.active?'#111827':'#9ca3af')+';line-height:1.3;">'+s.label+'</div><div style="font-size:11px;color:#9ca3af;margin-top:2px;line-height:1.4;">'+s.desc+'</div></div></div>').join('')+
-        '</div>'+
-        '<div class="footer-note"><p style="color:#9ca3af;font-size:11px;margin:0 0 2px;">Questions? Contact Ferdinand at Boroughwest Digital</p><p style="color:#d1d5db;font-size:11px;margin:0;">Manhattan, NYC · Local Business Automation</p></div>';
+
+      document.getElementById('content').innerHTML =
+        '<div class="card fade-up">' +
+          '<div class="card-label">' + month + ' ' + year + ' — Your Results</div>' +
+          '<div class="stat-grid">' +
+            stats.map(s =>
+              '<div class="stat-card" style="background:' + s.bg + '">' +
+                '<div class="stat-icon">' + s.icon + '</div>' +
+                '<div class="stat-value" style="color:' + s.color + '">' + s.value + '</div>' +
+                '<div class="stat-label">' + s.label + '</div>' +
+              '</div>'
+            ).join('') +
+          '</div>' +
+          '<div class="revenue-banner">' +
+            '<div style="font-size:19px;font-weight:800;">Results Coming Soon 🚀</div>' +
+            '<div style="font-size:12px;color:#bfdbfe;margin-top:4px;">Your stats will update after your first month</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="card fade-up" style="animation-delay:0.1s">' +
+          '<div class="card-label">What\'s Active For You</div>' +
+          services.map(s =>
+            '<div class="service-row">' +
+              '<div class="service-dot" style="background:' + (s.active ? '#dcfce7' : '#f3f4f6') + ';color:' + (s.active ? '#16a34a' : '#9ca3af') + '">' + (s.active ? '✓' : '○') + '</div>' +
+              '<div style="flex:1;min-width:0;">' +
+                '<div style="font-size:13px;font-weight:600;color:' + (s.active ? '#111827' : '#9ca3af') + ';line-height:1.3;">' + s.label + '</div>' +
+                '<div style="font-size:11px;color:#9ca3af;margin-top:2px;line-height:1.4;">' + s.desc + '</div>' +
+              '</div>' +
+            '</div>'
+          ).join('') +
+        '</div>' +
+        '<div class="footer-note">' +
+          '<p style="color:#9ca3af;font-size:11px;margin:0 0 2px;">Questions? Contact Ferdinand at Boroughwest Digital</p>' +
+          '<p style="color:#d1d5db;font-size:11px;margin:0;">Manhattan, NYC · Local Business Automation</p>' +
+        '</div>';
     }
 
-    // Boot
+    // Read business name from URL param — no API call needed
+    const params = new URLSearchParams(window.location.search);
+    const bizName = params.get('name') || 'Your Business';
+    const pkg = params.get('pkg') || '';
+
     launchConfetti();
-    setTimeout(()=>{
-      const sp=document.getElementById('splash');
-      sp.style.opacity='0';
-      setTimeout(()=>{sp.style.display='none';},700);
-      document.getElementById('main').style.opacity='1';
-    },3500);
+    buildDashboard(bizName, pkg);
 
-    const params=new URLSearchParams(window.location.search);
-    const clientId=params.get('client');
-    if(!clientId){
-      document.getElementById('splash-name').textContent='Demo Preview';
-      buildDashboard({business_name:'Demo Business'});
-    } else {
-      fetch('https://base44.app/api/apps/6a1b5820c74ffab0eedd9b5a/entities/Client/filter',{
-        method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:clientId})
-      }).then(r=>r.json()).then(data=>{
-        const list=Array.isArray(data)?data:(data.items||[]);
-        const client=list[0];
-        if(!client){buildDashboard({business_name:'Your Business'});return;}
-        buildDashboard(client);
-      }).catch(()=>buildDashboard({business_name:'Your Business'}));
-    }
+    setTimeout(() => {
+      const sp = document.getElementById('splash');
+      sp.style.opacity = '0';
+      setTimeout(() => { sp.style.display = 'none'; }, 700);
+      document.getElementById('main').style.opacity = '1';
+    }, 3500);
   </script>
 </body>
 </html>
