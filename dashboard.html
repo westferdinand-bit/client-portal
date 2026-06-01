@@ -607,7 +607,20 @@ window.openEditClient = function(id){
         </div>
       </div>
       <div class="form-group"><label class="form-label">Missed Call Text-Back Message</label><textarea class="form-textarea" id="ef-mc" rows="2">${cl.missed_call_message||''}</textarea></div>
-      <div class="form-group"><label class="form-label">Review Request Message</label><textarea class="form-textarea" id="ef-rr" rows="2">${cl.review_request_message||''}</textarea></div>
+      <div class="form-group">
+        <label class="form-label">Google Review Link</label>
+        <div style="display:flex;gap:8px;align-items:center;margin-top:4px">
+          <input class="form-input" id="ef-glink" type="url" value="${cl.google_review_link||''}" placeholder="https://g.page/r/XXXXXXXX/review" style="margin-top:0;flex:1"/>
+          <button type="button" onclick="getGoogleLink('${cl.business_name}','${cl.address||''}')"
+            style="flex-shrink:0;background:#4285f4;color:#fff;border:none;border-radius:8px;padding:9px 12px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">
+            🔍 Find on Google
+          </button>
+        </div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:5px">
+          💡 Click "Find on Google" → opens Maps → click Share → copy link → paste above
+        </div>
+      </div>
+      <div class="form-group"><label class="form-label">Review Request Message</label><textarea class="form-textarea" id="ef-rr" rows="2">${cl.review_request_message||''}</textarea><div style="font-size:11px;color:#9ca3af;margin-top:4px">Use {link} to insert Google review link. Leave blank for default.</div></div>
       <div class="form-group"><label class="form-label">Notes</label><textarea class="form-textarea" id="ef-notes" rows="2">${cl.notes||''}</textarea></div>
       <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:6px">
         <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
@@ -617,12 +630,20 @@ window.openEditClient = function(id){
   </div>`);
 };
 
+window.getGoogleLink = function(bizName, address){
+  const query = encodeURIComponent((bizName||'business') + ' ' + (address||'Manhattan NYC'));
+  window.open('https://www.google.com/maps/search/'+query, '_blank');
+  // Show a tooltip
+  toast('Google Maps opened — click Share on the listing, copy the link, paste it above ✅');
+};
+
 window.saveEditClient = function(id){
   DB.Client.update(id,{
     business_name:document.getElementById('ef-bname').value.trim(),
     owner_name:document.getElementById('ef-oname').value.trim(),
     business_type:document.getElementById('ef-btype').value.trim(),
     phone_number:document.getElementById('ef-phone').value.trim(),
+    google_review_link:document.getElementById('ef-glink').value.trim(),
     email:document.getElementById('ef-email').value.trim(),
     package:document.getElementById('ef-pkg').value,
     status:document.getElementById('ef-status').value,
