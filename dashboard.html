@@ -217,11 +217,34 @@ a{text-decoration:none;color:inherit}
 // ============================================================
 // DATA LAYER (localStorage)
 // ============================================================
-const DATA_VERSION = 'v4_clean';
+const DATA_VERSION = 'v5_inbox';
 (function(){
   if(localStorage.getItem('leadflow_version') !== DATA_VERSION){
     Object.keys(localStorage).filter(k=>k.startsWith('leadflow')).forEach(k=>localStorage.removeItem(k));
     localStorage.setItem('leadflow_version', DATA_VERSION);
+    const cid = 'demo_client_001';
+    const now = Date.now();
+    const min = 60000;
+    const store = {
+      Client: [{
+        id: cid, business_name: 'Boroughwest Digital', owner_name: 'Ferdinand West',
+        business_type: 'Marketing Agency', phone_number: '2125550100',
+        email: 'west.ferdinand@gmail.com', status: 'Active', package: 'Premium',
+        slug: 'boroughwest-digital', has_physical_location: false,
+        created_date: new Date(now - 7*24*60*min).toISOString()
+      }],
+      Message: [
+        { id:'msg1', client_id:cid, client_name:'Boroughwest Digital', lead_name:'Marcus Johnson', lead_phone:'+12125550188', platform:'SMS', direction:'Inbound',  content:'Hey I saw your ad — how much do you charge?', status:'Unread', created_date: new Date(now - 45*min).toISOString() },
+        { id:'msg2', client_id:cid, client_name:'Boroughwest Digital', lead_name:'Marcus Johnson', lead_phone:'+12125550188', platform:'SMS', direction:'Outbound', content:"Hey! Thanks for reaching out — I'll get back to you shortly.", status:'Sent',  created_date: new Date(now - 44*min).toISOString() },
+        { id:'msg3', client_id:cid, client_name:'Boroughwest Digital', lead_name:'Marcus Johnson', lead_phone:'+12125550188', platform:'SMS', direction:'Inbound',  content:'Cool, also are you open on Saturdays?', status:'Unread', created_date: new Date(now - 30*min).toISOString() },
+        { id:'msg4', client_id:cid, client_name:'Boroughwest Digital', lead_name:'Priya Sharma',   lead_phone:'+12125550244', platform:'SMS', direction:'Inbound',  content:'Hi! I missed your call, what did you need?', status:'Unread', created_date: new Date(now - 120*min).toISOString() },
+        { id:'msg5', client_id:cid, client_name:'Boroughwest Digital', lead_name:'Priya Sharma',   lead_phone:'+12125550244', platform:'SMS', direction:'Outbound', content:"Hey Priya! I'd love to get you scheduled. Reply YES and I'll send a booking link.", status:'Sent', created_date: new Date(now - 118*min).toISOString() },
+        { id:'msg6', client_id:cid, client_name:'Boroughwest Digital', lead_name:'Priya Sharma',   lead_phone:'+12125550244', platform:'SMS', direction:'Inbound',  content:'YES! Please send it over :)', status:'Unread', created_date: new Date(now - 90*min).toISOString() },
+        { id:'msg7', client_id:cid, client_name:'Boroughwest Digital', lead_name:'Derrick Cole',   lead_phone:'+12125550312', platform:'Instagram DM', direction:'Inbound', content:'Yo what are your hours?', status:'Unread', created_date: new Date(now - 180*min).toISOString() },
+      ],
+      Lead: [], ReviewRequest: []
+    };
+    localStorage.setItem('leadflow_data', JSON.stringify(store));
   }
 })();
 
