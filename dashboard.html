@@ -888,14 +888,25 @@ window.deleteLead = function(id){
 // ============================================================
 // INBOX
 // ============================================================
+const QUICK_REPLIES = [
+  { label: '👋 Be right with you', text: "Hey! Thanks for reaching out — I'll get back to you shortly." },
+  { label: '📅 Book appointment',  text: "I'd love to get you scheduled! Reply YES and I'll send over a booking link." },
+  { label: '✅ Confirmed',          text: "You're all set! We look forward to seeing you." },
+  { label: '📞 Call you back',     text: "Hey! Saw your message — I'll give you a quick call shortly." },
+  { label: '🕒 Hours',             text: "We're open Mon\u2013Fri 9am\u20136pm and Sat 10am\u20134pm. How can we help?" },
+  { label: '🙏 Thank you',         text: "Thank you so much \u2014 we really appreciate your support!" },
+  { label: '💰 Pricing',           text: "Happy to share pricing! What service are you looking for?" },
+  { label: '📍 Address',           text: "We're located at {address}. See you soon!" },
+];
+
 function renderInbox(c){
   const messages = DB.Message.list().sort((a,b)=>new Date(b.created_date)-new Date(a.created_date));
   const clients  = DB.Client.list();
 
-  // Group messages into conversations by (client_id + lead_name)
+  // Group into threads by (client_id + lead_phone + platform)
   const convMap = {};
   messages.forEach(m=>{
-    const key = (m.client_id||m.client_name||'') + '||' + (m.lead_name||'unknown');
+    const key = (m.client_id||m.client_name||'') + '||' + (m.lead_phone||m.lead_name||'unknown') + '||' + (m.platform||'');
     if(!convMap[key]) convMap[key]={
       key, client_id:m.client_id, client_name:m.client_name,
       lead_name:m.lead_name, lead_phone:m.lead_phone||'',
@@ -904,45 +915,68 @@ function renderInbox(c){
     };
     convMap[key].messages.push(m);
     if(m.direction==='Inbound' && m.status!=='Read') convMap[key].unread++;
+    if(new Date(m.created_date) > new Date(convMap[key].last_time)) {
+      convMap[key].last_time = m.created_date;
+      convMap[key].last_message = m.content;
+    }
   });
+  // Sort messages within each thread oldest-first
+  Object.values(convMap).forEach(cv => cv.messages.sort((a,b)=>new Date(a.created_date)-new Date(b.created_date)));
   const convs = Object.values(convMap).sort((a,b)=>new Date(b.last_time)-new Date(a.last_time));
 
-  // Filter state
   const filter = window._inboxFilter || 'all';
   const clientFilter = window._inboxClientFilter || '';
+  const search = window._inboxSearch || '';
   let filtered = convs;
-  if(filter!=='all') filtered = filtered.filter(c=>c.platform===filter);
-  if(clientFilter) filtered = filtered.filter(c=>c.client_name===clientFilter);
+  if(filter!=='all') filtered = filtered.filter(cv=>cv.platform===filter);
+  if(clientFilter) filtered = filtered.filter(cv=>cv.client_name===clientFilter);
+  if(search) filtered = filtered.filter(cv=>(cv.lead_name||'').toLowerCase().includes(search.toLowerCase())||(cv.lead_phone||'').includes(search));
 
-  const totalUnread = convs.reduce((s,c)=>s+c.unread,0);
+  const totalUnread = convs.reduce((s,cv)=>s+cv.unread,0);
+  const activeKey = window._activeConvKey || null;
+  const activeConv = activeKey ? convMap[activeKey] : null;
+
   document.getElementById('topbar-actions').innerHTML=
     `<button class="btn btn-primary btn-sm" onclick="openNewConversation()">+ New Message</button>`;
 
   const platformColors = {'SMS':'#6366f1','Instagram DM':'#ec4899','Facebook DM':'#2563eb','Email':'#0d9488','Phone Call':'#d97706'};
-  const platformIcons  = {'SMS':'💬','Instagram DM':'📸','Facebook DM':'👤','Email':'📧','Phone Call':'📞'};
+  const platformIcons  = {'SMS':'📱','Instagram DM':'📸','Facebook DM':'📘','Email':'📧','Phone Call':'📞'};
 
   c.innerHTML=`
   <style>
-    .conv-row{display:flex;align-items:flex-start;gap:12px;padding:14px 16px;border-bottom:1px solid #f3f4fb;cursor:pointer;transition:background .15s}
+    .conv-list{background:#fff;border-radius:16px;border:1px solid #eef0f8;overflow:hidden;max-height:640px;display:flex;flex-direction:column}
+    .conv-rows{overflow-y:auto;flex:1}
+    .conv-row{display:flex;align-items:flex-start;gap:11px;padding:13px 15px;border-bottom:1px solid #f3f4fb;cursor:pointer;transition:background .12s;border-left:3px solid transparent}
     .conv-row:hover{background:#f8f9ff}
-    .conv-row.unread-row{background:#fafbff}
-    .conv-avatar{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;flex-shrink:0;color:#fff}
-    .inbox-sidebar{background:#fff;border-radius:16px;border:1px solid #eef0f8;overflow:hidden}
-    .thread-box{background:#fff;border-radius:16px;border:1px solid #eef0f8;display:flex;flex-direction:column}
-    .msg-bubble{max-width:72%;padding:10px 14px;border-radius:16px;font-size:13px;line-height:1.5;margin-bottom:8px}
+    .conv-row.active{background:#f3f4ff;border-left:3px solid #6366f1}
+    .conv-row.unread-row .conv-lead{font-weight:800}
+    .conv-avatar{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0;color:#fff}
+    .conv-lead{font-size:13px;color:#0f1117;font-weight:600}
+    .conv-sub{font-size:11px;color:#9aaac8;margin-top:1px}
+    .conv-preview{font-size:12px;color:#9aaac8;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .thread-pane{background:#fff;border-radius:16px;border:1px solid #eef0f8;display:flex;flex-direction:column;height:640px}
+    .thread-header{padding:13px 16px;border-bottom:1px solid #f3f4fb;display:flex;align-items:center;gap:10px;flex-shrink:0}
+    .thread-msgs{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:6px;background:#f8f9ff}
+    .msg-bubble{max-width:72%;padding:10px 14px;border-radius:16px;font-size:13px;line-height:1.5}
     .msg-out{background:#6366f1;color:#fff;border-radius:16px 16px 4px 16px;align-self:flex-end}
-    .msg-in{background:#f3f4fb;color:#1e293b;border-radius:16px 16px 16px 4px;align-self:flex-start}
-    .reply-bar{border-top:1px solid #f3f4fb;padding:12px 16px;display:flex;gap:10px;align-items:flex-end}
-    .reply-input{flex:1;border:1.5px solid #e5e7eb;border-radius:12px;padding:10px 14px;font-size:13px;font-family:inherit;resize:none;outline:none;max-height:120px}
+    .msg-in{background:#fff;color:#1e293b;border:1px solid #eef0f8;border-radius:16px 16px 16px 4px;align-self:flex-start}
+    .quick-bar{padding:10px 14px 6px;border-top:1px solid #f3f4fb;flex-shrink:0}
+    .qr-btn{padding:5px 10px;border-radius:20px;border:1.5px solid #e5e7eb;background:#fff;color:#4338ca;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all .12s}
+    .qr-btn:hover{background:#ede9fe;border-color:#a5b4fc}
+    .reply-bar{padding:10px 14px 14px;display:flex;gap:8px;align-items:flex-end;flex-shrink:0}
+    .reply-input{flex:1;border:1.5px solid #e5e7eb;border-radius:12px;padding:10px 13px;font-size:13px;font-family:inherit;resize:none;outline:none;line-height:1.5}
     .reply-input:focus{border-color:#6366f1}
+    .send-btn{background:#6366f1;color:#fff;border:none;border-radius:12px;padding:10px 18px;font-size:13px;font-weight:700;cursor:pointer;flex-shrink:0;transition:all .15s}
+    .send-btn:disabled{background:#e0e7ff;color:#a5b4fc;cursor:not-allowed}
+    .inbox-hint{font-size:11px;color:#c4cde4;margin-top:5px}
   </style>
 
-  <!-- Stats row -->
-  <div class="grid-3" style="margin-bottom:20px">
+  <!-- Stats -->
+  <div class="grid-3" style="margin-bottom:18px">
     ${[
-      {label:'All Conversations',val:convs.length,color:'#6366f1',bg:'rgba(99,102,241,0.1)',icon:'💬'},
+      {label:'Conversations',val:convs.length,color:'#6366f1',bg:'rgba(99,102,241,0.1)',icon:'💬'},
       {label:'Unread',val:totalUnread,color:'#ef4444',bg:'rgba(239,68,68,0.1)',icon:'🔴'},
-      {label:'Clients Connected',val:new Set(convs.map(c=>c.client_name)).size,color:'#0d9488',bg:'rgba(20,184,166,0.1)',icon:'🏢'},
+      {label:'Clients',val:new Set(convs.map(cv=>cv.client_name)).size,color:'#0d9488',bg:'rgba(20,184,166,0.1)',icon:'🏢'},
     ].map(s=>`<div class="card stat-card">
       <div class="stat-icon" style="background:${s.bg}">${s.icon}</div>
       <div class="stat-value" style="color:${s.color}">${s.val}</div>
@@ -950,50 +984,111 @@ function renderInbox(c){
     </div>`).join('')}
   </div>
 
-  <!-- Filter bar -->
-  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center">
-    ${['all','SMS','Instagram DM','Facebook DM','Email'].map(p=>
+  <!-- Filters -->
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center">
+    ${['all','SMS','Instagram DM','Facebook DM'].map(p=>
       `<button onclick="window._inboxFilter='${p}';renderInbox(document.getElementById('content'))"
         style="padding:6px 14px;border-radius:20px;border:1.5px solid ${filter===p?'#6366f1':'#e5e7eb'};
         background:${filter===p?'#6366f1':'#fff'};color:${filter===p?'#fff':'#6b7280'};
         font-size:12px;font-weight:600;cursor:pointer">
-        ${p==='all'?'All':platformIcons[p]+' '+p}
+        ${p==='all'?'📬 All':platformIcons[p]+' '+p}
       </button>`
     ).join('')}
-    <select onchange="window._inboxClientFilter=this.value;renderInbox(document.getElementById('content'))"
-      style="margin-left:auto;padding:6px 12px;border-radius:8px;border:1.5px solid #e5e7eb;font-size:12px;color:#374151;background:#fff;cursor:pointer">
-      <option value="">All Clients</option>
-      ${clients.map(cl=>`<option value="${cl.business_name}" ${clientFilter===cl.business_name?'selected':''}>${cl.business_name}</option>`).join('')}
-    </select>
+    <input oninput="window._inboxSearch=this.value;renderInbox(document.getElementById('content'))"
+      value="${search}" placeholder="🔍 Search contacts…"
+      style="margin-left:auto;padding:7px 13px;border-radius:10px;border:1.5px solid #e5e7eb;font-size:12px;color:#1e2538;background:#fff;outline:none;min-width:170px"/>
   </div>
 
-  <!-- Conversation list -->
-  <div class="inbox-sidebar">
-    ${filtered.length===0
-      ?`<div class="empty" style="padding:48px"><div class="empty-icon">💬</div><div class="empty-title">No conversations yet</div><div class="empty-sub">Messages from SMS, Instagram, and Facebook will appear here</div></div>`
-      :filtered.map(conv=>{
-        const initials=(conv.lead_name||'?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
-        const color=platformColors[conv.platform]||'#6366f1';
-        const icon=platformIcons[conv.platform]||'💬';
-        const timeAgo=conv.last_time?timeSince(conv.last_time):'';
-        return `<div class="conv-row ${conv.unread>0?'unread-row':''}" onclick="openConversation('${conv.key.replace(/'/g,"\'")}')">
-          <div class="conv-avatar" style="background:${color}">${initials}</div>
-          <div style="flex:1;min-width:0">
-            <div style="display:flex;justify-content:space-between;align-items:center">
-              <div style="font-weight:${conv.unread>0?'800':'600'};font-size:14px;color:#1e293b">${conv.lead_name||'Unknown'}</div>
-              <div style="font-size:11px;color:#9aaac8">${timeAgo}</div>
-            </div>
-            <div style="font-size:12px;color:#6b7280;margin-top:1px">${conv.client_name||''} · <span style="color:${color}">${icon} ${conv.platform||''}</span></div>
-            <div style="font-size:12px;color:${conv.unread>0?'#1e293b':'#9aaac8'};margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:${conv.unread>0?'600':'400'}">${conv.last_message||''}</div>
-          </div>
-          ${conv.unread>0?`<div style="width:8px;height:8px;border-radius:50%;background:#ef4444;flex-shrink:0;margin-top:6px"></div>`:''}
-        </div>`;
-      }).join('')
-    }
+  <!-- Two-pane -->
+  <div style="display:grid;grid-template-columns:${activeConv?'320px 1fr':'1fr'};gap:14px;align-items:start">
+
+    <!-- Thread list -->
+    <div class="conv-list">
+      <div class="conv-rows">
+        ${filtered.length===0
+          ?`<div class="empty" style="padding:48px"><div class="empty-icon">💬</div><div class="empty-title">No conversations yet</div><div class="empty-sub">Messages from SMS, Instagram, and Facebook will appear here</div></div>`
+          :filtered.map(conv=>{
+            const initials=(conv.lead_name||'?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+            const color=platformColors[conv.platform]||'#6366f1';
+            const icon=platformIcons[conv.platform]||'💬';
+            const isActive=activeKey===conv.key;
+            return `<div class="conv-row ${conv.unread>0?'unread-row':''} ${isActive?'active':''}"
+              onclick="window._activeConvKey='${conv.key.replace(/'/g,"\'")}';renderInbox(document.getElementById('content'))">
+              <div class="conv-avatar" style="background:${color}">${initials}</div>
+              <div style="flex:1;min-width:0">
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                  <div class="conv-lead">${conv.lead_name||conv.lead_phone||'Unknown'}</div>
+                  <div style="font-size:11px;color:#c4cde4">${timeSince(conv.last_time)}</div>
+                </div>
+                <div class="conv-sub">${conv.client_name||''} · <span style="color:${color}">${icon} ${conv.platform||''}</span></div>
+                <div class="conv-preview ${conv.unread>0?'conv-lead':''}">${conv.last_message||''}</div>
+              </div>
+              ${conv.unread>0?`<div style="width:8px;height:8px;border-radius:50%;background:#ef4444;flex-shrink:0;margin-top:6px"></div>`:''}
+            </div>`;
+          }).join('')
+        }
+      </div>
+    </div>
+
+    <!-- Thread detail -->
+    ${activeConv?`
+    <div class="thread-pane">
+      <!-- Header -->
+      <div class="thread-header">
+        <div style="width:36px;height:36px;border-radius:50%;background:${platformColors[activeConv.platform]||'#6366f1'};display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;color:#fff;flex-shrink:0">
+          ${(activeConv.lead_name||'?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2)}
+        </div>
+        <div style="flex:1">
+          <div style="font-weight:700;font-size:14px;color:#0f1117">${activeConv.lead_name||'Unknown'}</div>
+          <div style="font-size:12px;color:#9aaac8">${activeConv.lead_phone||''} · ${activeConv.client_name} · ${platformIcons[activeConv.platform]||'💬'} ${activeConv.platform}</div>
+        </div>
+        <button onclick="window._activeConvKey=null;renderInbox(document.getElementById('content'))"
+          style="background:none;border:none;font-size:18px;cursor:pointer;color:#c4cde4">✕</button>
+      </div>
+
+      <!-- Messages -->
+      <div class="thread-msgs" id="thread-scroll">
+        ${activeConv.messages.map(m=>`
+          <div style="display:flex;flex-direction:column;align-items:${m.direction==='Outbound'?'flex-end':'flex-start'}">
+            <div class="msg-bubble ${m.direction==='Outbound'?'msg-out':'msg-in'}">${m.content||''}</div>
+            <div style="font-size:10px;color:#c0c9d8;margin-bottom:2px;padding:0 4px">${fmt(m.created_date)}</div>
+          </div>`).join('')}
+      </div>
+
+      <!-- Quick replies -->
+      <div class="quick-bar">
+        <div style="font-size:10px;color:#c4cde4;font-weight:700;margin-bottom:6px;letter-spacing:.05em">QUICK REPLIES</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          ${QUICK_REPLIES.map(qr=>`
+            <button class="qr-btn" onclick="document.getElementById('reply-input').value='${qr.text.replace(/'/g,"&#39;")}';document.getElementById('reply-input').focus()">${qr.label}</button>
+          `).join('')}
+        </div>
+      </div>
+
+      <!-- Reply bar -->
+      <div class="reply-bar">
+        <textarea class="reply-input" id="reply-input" rows="2"
+          placeholder="Type a message… or pick a quick reply above"
+          onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();inboxSendReply('${activeConv.client_id||''}','${activeConv.client_name||''}','${activeConv.lead_name||''}','${activeConv.lead_phone||''}','${activeConv.platform||''}','${activeConv.key.replace(/'/g,"\'")}')}"
+        ></textarea>
+        <button class="send-btn" id="send-btn"
+          onclick="inboxSendReply('${activeConv.client_id||''}','${activeConv.client_name||''}','${activeConv.lead_name||''}','${activeConv.lead_phone||''}','${activeConv.platform||''}','${activeConv.key.replace(/'/g,"\\'")}')">
+          Send ↑
+        </button>
+      </div>
+      <div class="inbox-hint" style="padding:0 14px 10px">Enter to send · Shift+Enter for new line</div>
+    </div>`:''}
   </div>`;
+
+  // Auto-scroll to bottom of thread
+  setTimeout(()=>{
+    const s=document.getElementById('thread-scroll');
+    if(s) s.scrollTop=s.scrollHeight;
+  },50);
 }
 
 function timeSince(dateStr){
+  if(!dateStr) return '';
   const diff=Date.now()-new Date(dateStr).getTime();
   const m=Math.floor(diff/60000);
   if(m<1) return 'just now';
@@ -1004,56 +1099,37 @@ function timeSince(dateStr){
   return d+'d ago';
 }
 
-window.openConversation = function(key){
-  const messages = DB.Message.list().sort((a,b)=>new Date(a.created_date)-new Date(b.created_date));
-  const convMap = {};
-  messages.forEach(m=>{
-    const k=(m.client_id||m.client_name||'')+'||'+(m.lead_name||'unknown');
-    if(!convMap[k]) convMap[k]={key:k,client_id:m.client_id,client_name:m.client_name,lead_name:m.lead_name,lead_phone:m.lead_phone||'',platform:m.platform,messages:[]};
-    convMap[k].messages.push(m);
-  });
-  const conv=convMap[key];
-  if(!conv){toast('Conversation not found','error');return;}
-  const platformColors={'SMS':'#6366f1','Instagram DM':'#ec4899','Facebook DM':'#2563eb','Email':'#0d9488','Phone Call':'#d97706'};
-  const platformIcons={'SMS':'💬','Instagram DM':'📸','Facebook DM':'👤','Email':'📧','Phone Call':'📞'};
-  const color=platformColors[conv.platform]||'#6366f1';
-  const icon=platformIcons[conv.platform]||'💬';
-  const canReply = conv.platform==='SMS' && conv.lead_phone;
+window.inboxSendReply = function(clientId, clientName, leadName, leadPhone, platform, convKey){
+  const input = document.getElementById('reply-input');
+  const btn = document.getElementById('send-btn');
+  const text = input ? input.value.trim() : '';
+  if(!text){ toast('Type a message first','error'); return; }
+  if(btn){ btn.disabled=true; btn.textContent='Sending…'; }
 
-  showModal(`<div class="modal" style="max-width:560px;width:100%">
-    <div class="modal-header">
-      <div style="display:flex;align-items:center;gap:10px">
-        <div style="width:36px;height:36px;border-radius:50%;background:${color};display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;color:#fff">${(conv.lead_name||'?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2)}</div>
-        <div>
-          <div style="font-weight:700;font-size:15px;color:#1e293b">${conv.lead_name||'Unknown'}</div>
-          <div style="font-size:12px;color:#9aaac8">${conv.client_name} · ${icon} ${conv.platform}${conv.lead_phone?' · '+conv.lead_phone:''}</div>
-        </div>
-      </div>
-      <button class="modal-close" onclick="closeModal()">✕</button>
-    </div>
-    <div class="modal-body" style="padding:0">
-      <!-- Thread -->
-      <div style="display:flex;flex-direction:column;padding:16px;gap:4px;max-height:340px;overflow-y:auto;background:#f8f9ff" id="thread-scroll">
-        ${conv.messages.map(m=>`
-          <div style="display:flex;flex-direction:column;align-items:${m.direction==='Outbound'?'flex-end':'flex-start'}">
-            <div class="msg-bubble ${m.direction==='Outbound'?'msg-out':'msg-in'}">${m.content||''}</div>
-            <div style="font-size:10px;color:#c0c9d8;margin-bottom:4px;margin-top:-4px;padding:0 4px">${fmt(m.created_date)}</div>
-          </div>`).join('')}
-      </div>
-      <!-- Reply bar -->
-      ${canReply?`
-      <div class="reply-bar">
-        <textarea class="reply-input" id="reply-text" rows="2" placeholder="Reply via SMS..."></textarea>
-        <button onclick="sendReply('${conv.client_id||''}','${conv.client_name||''}','${conv.lead_name||''}','${conv.lead_phone||''}','${conv.platform||''}')"
-          style="background:#6366f1;color:#fff;border:none;border-radius:10px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer;flex-shrink:0">Send</button>
-      </div>`:`
-      <div style="padding:12px 16px;background:#fafafa;border-top:1px solid #f3f4fb;text-align:center;font-size:12px;color:#9aaac8">
-        ${conv.platform==='SMS'&&!conv.lead_phone?'Add a phone number to this lead to enable replies':'Replies via '+conv.platform+' coming soon'}
-      </div>`}
-    </div>
-  </div>`);
-  // Auto-scroll thread to bottom
-  setTimeout(()=>{const el=document.getElementById('thread-scroll');if(el)el.scrollTop=el.scrollHeight;},50);
+  if(platform==='SMS' && leadPhone){
+    fetch('https://superagent-eedd9b5a.base44.app/functions/sendSms',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({to:leadPhone,message:text,client_id:clientId,client_name:clientName,lead_name:leadName,type:'manual'})
+    }).then(r=>r.json()).then(d=>{
+      if(d.ok){
+        DB.Message.create({client_id:clientId,client_name:clientName,lead_name:leadName,lead_phone:leadPhone,platform,direction:'Outbound',content:text,status:'Sent'});
+        window._activeConvKey=convKey;
+        renderInbox(document.getElementById('content'));
+        toast('Sent ✅');
+      } else {
+        if(btn){btn.disabled=false;btn.textContent='Send ↑';}
+        toast('SMS failed: '+(d.error||'check Twilio'),'error');
+      }
+    }).catch(()=>{
+      if(btn){btn.disabled=false;btn.textContent='Send ↑';}
+      toast('Network error','error');
+    });
+  } else {
+    DB.Message.create({client_id:clientId,client_name:clientName,lead_name:leadName,lead_phone:leadPhone,platform,direction:'Outbound',content:text,status:'Sent'});
+    window._activeConvKey=convKey;
+    renderInbox(document.getElementById('content'));
+    toast('Message logged ✅');
+  }
 };
 
 window.sendReply = function(clientId, clientName, leadName, leadPhone, platform){
