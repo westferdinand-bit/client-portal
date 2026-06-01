@@ -911,16 +911,35 @@ window.deleteLead = function(id){
 // ============================================================
 // INBOX
 // ============================================================
-const QUICK_REPLIES = [
-  { label: '👋 Be right with you', text: "Hey! Thanks for reaching out — I'll get back to you shortly." },
-  { label: '📅 Book appointment',  text: "I'd love to get you scheduled! Reply YES and I'll send over a booking link." },
-  { label: '✅ Confirmed',          text: "You're all set! We look forward to seeing you." },
-  { label: '📞 Call you back',     text: "Hey! Saw your message — I'll give you a quick call shortly." },
-  { label: '🕒 Hours',             text: "We're open Mon\u2013Fri 9am\u20136pm and Sat 10am\u20134pm. How can we help?" },
-  { label: '🙏 Thank you',         text: "Thank you so much \u2014 we really appreciate your support!" },
-  { label: '💰 Pricing',           text: "Happy to share pricing! What service are you looking for?" },
-  { label: '📍 Address',           text: "We're located at {address}. See you soon!" },
-];
+function smartSuggest(lastMsg, client) {
+  const t = (lastMsg || '').toLowerCase();
+  const bookingLink = client ? ('https://superagent-eedd9b5a.base44.app/functions/bookAppointment?client=' + (client.slug || '')) : '';
+  const address = (client && client.address) ? client.address : '';
+
+  if (/\b(book|schedul|appoint|come in|set up|availab|slot|when can|yes|yeah|yep|sure|ok|okay)\b/.test(t))
+    return bookingLink
+      ? 'Here\u2019s our booking link \u2014 grab a time that works for you: ' + bookingLink
+      : 'I\u2019d love to get you scheduled! Let me know what day works best for you.';
+
+  if (/\b(price|cost|how much|charge|rate|fee|quote|estimate)\b/.test(t))
+    return 'Happy to help with pricing! What service are you looking for?';
+
+  if (/\b(hour|open|close|when|what time|today|weekend|saturday|sunday)\b/.test(t))
+    return 'We\u2019re open Mon\u2013Fri 9am\u20136pm and Sat 10am\u20134pm. Anything else I can help with?';
+
+  if (/\b(where|address|location|direction|find you|map|near)\b/.test(t))
+    return address
+      ? 'We\u2019re located at ' + address + '. See you soon!'
+      : 'Happy to share our address \u2014 just give me one moment!';
+
+  if (/\b(miss|call|rang|what did you|you called)\b/.test(t))
+    return 'Hey! Sorry I missed you. I\u2019d love to get you taken care of \u2014 reply YES and I\u2019ll send a booking link.';
+
+  if (/\b(thank|thanks|appreciate|great|awesome|perfect|love it)\b/.test(t))
+    return 'Thank you so much \u2014 we really appreciate it! Let us know if there\u2019s anything else we can do.';
+
+  return 'Hey! Thanks for reaching out \u2014 how can I help you today?';
+}
 
 function renderInbox(c){
   const messages = DB.Message.list().sort((a,b)=>new Date(b.created_date)-new Date(a.created_date));
@@ -1078,28 +1097,36 @@ function renderInbox(c){
           </div>`).join('')}
       </div>
 
-      <!-- Quick replies -->
-      <div class="quick-bar">
-        <div style="font-size:10px;color:#c4cde4;font-weight:700;margin-bottom:6px;letter-spacing:.05em">QUICK REPLIES</div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap">
-          ${QUICK_REPLIES.map(qr=>`
-            <button class="qr-btn" onclick="document.getElementById('reply-input').value='${qr.text.replace(/'/g,"&#39;")}';document.getElementById('reply-input').focus()">${qr.label}</button>
-          `).join('')}
+      <!-- Smart suggested reply -->
+      ${(()=>{
+        const lastInbound = [...activeConv.messages].reverse().find(m=>m.direction==='Inbound');
+        const convClient = clients.find(cl=>cl.id===activeConv.client_id);
+        const suggested = smartSuggest(lastInbound ? lastInbound.content : '', convClient || null);
+        const safeText = suggested.replace(/\\/g,'\\\\').replace(/`/g,'\\`').replace(/\$/g,'\\$');
+        return `
+      <div style="padding:10px 14px 4px;border-top:1px solid #f3f4fb;flex-shrink:0">
+        <div style="font-size:10px;color:#a5b4fc;font-weight:700;margin-bottom:6px;letter-spacing:.05em">SUGGESTED REPLY</div>
+        <div style="background:rgba(99,102,241,0.05);border:1.5px solid rgba(99,102,241,0.18);border-radius:10px;padding:10px 13px;font-size:13px;color:#3d4d6e;line-height:1.5;cursor:pointer;transition:background .15s"
+          onmouseover="this.style.background='rgba(99,102,241,0.1)'" onmouseout="this.style.background='rgba(99,102,241,0.05)'"
+          onclick="(function(){var el=document.getElementById('reply-input');el.value=\`${safeText}\`;el.focus();el.select();})()">
+          <div>${suggested}</div>
+          <div style="font-size:10px;color:#a5b4fc;margin-top:5px">Tap to load &rarr; edit if needed &rarr; Send</div>
         </div>
-      </div>
+      </div>`;
+      })()}
 
       <!-- Reply bar -->
       <div class="reply-bar">
         <textarea class="reply-input" id="reply-input" rows="2"
-          placeholder="Type a message… or pick a quick reply above"
+          placeholder="Tap suggestion above, or type your own…"
           onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();inboxSendReply('${activeConv.client_id||''}','${activeConv.client_name||''}','${activeConv.lead_name||''}','${activeConv.lead_phone||''}','${activeConv.platform||''}','${activeConv.key.replace(/'/g,"\'")}')}"
         ></textarea>
         <button class="send-btn" id="send-btn"
-          onclick="inboxSendReply('${activeConv.client_id||''}','${activeConv.client_name||''}','${activeConv.lead_name||''}','${activeConv.lead_phone||''}','${activeConv.platform||''}','${activeConv.key.replace(/'/g,"\\'")}')">
+          onclick="inboxSendReply('${activeConv.client_id||''}','${activeConv.client_name||''}','${activeConv.lead_name||''}','${activeConv.lead_phone||''}','${activeConv.platform||''}','${activeConv.key.replace(/'/g,"\'")}')">
           Send ↑
         </button>
       </div>
-      <div class="inbox-hint" style="padding:0 14px 10px">Enter to send · Shift+Enter for new line</div>
+      <div class="inbox-hint" style="padding:0 14px 10px">Tap suggestion · Enter to send</div>
     </div>`:''}
   </div>`;
 
