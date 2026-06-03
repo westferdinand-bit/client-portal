@@ -1559,10 +1559,11 @@ function renderReferrals(c){
 // PROSPECTS
 // ============================================================
 function renderProspects(c){
-  let tab=window._prospectTab||'calltracker';
+  let tab=window._prospectTab||'pipeline';
   window._prospectTab=tab;
 
   const tabs=[
+    {id:'pipeline',label:'🎯 Pipeline'},
     {id:'calltracker',label:'📞 Call Tracker'},
     {id:'scripts',label:'📋 Cold Call Scripts'},
     {id:'whybw',label:'💡 Why Boroughwest Digital'},
@@ -1590,6 +1591,7 @@ function renderProspectTab(tab){
   const pc=document.getElementById('prospect-content');
   if(!pc) return;
   switch(tab){
+    case 'pipeline': renderProspectPipeline(pc); break;
     case 'calltracker': renderCallTracker(pc); break;
     case 'scripts': renderScripts(pc); break;
     case 'whybw': renderWhyBW(pc); break;
@@ -1597,6 +1599,163 @@ function renderProspectTab(tab){
     case 'closing': renderClosing(pc); break;
   }
 }
+
+// ── PROSPECT PIPELINE (Kanban) ──────────────────────────────────────────────
+const PSTAGES=[
+  {id:'Found',     emoji:'🔍', color:'#6b7280', bg:'rgba(107,114,128,0.1)'},
+  {id:'Contacted', emoji:'📞', color:'#6366f1', bg:'rgba(99,102,241,0.1)'},
+  {id:'Interested',emoji:'🔥', color:'#d97706', bg:'rgba(245,158,11,0.1)'},
+  {id:'Demo',      emoji:'📅', color:'#7c3aed', bg:'rgba(124,58,237,0.1)'},
+  {id:'Closed',    emoji:'✅', color:'#059669', bg:'rgba(5,150,105,0.1)'},
+  {id:'Dead',      emoji:'❌', color:'#dc2626', bg:'rgba(220,38,38,0.1)'},
+];
+
+function getProspects(){ try{ return JSON.parse(localStorage.getItem('bwd_prospects')||'[]'); }catch{ return []; } }
+function saveProspectsDB(data){ localStorage.setItem('bwd_prospects',JSON.stringify(data)); }
+
+function renderProspectPipeline(c){
+  const prospects=getProspects();
+  const closedCount=prospects.filter(p=>p.stage==='Closed').length;
+  const activeCount=prospects.filter(p=>!['Dead'].includes(p.stage)).length;
+
+  c.innerHTML=`
+  <div class="grid-3" style="margin-bottom:20px">
+    ${[
+      {label:'Total Prospects',val:prospects.length,color:'#6366f1',bg:'rgba(99,102,241,0.1)',icon:'🔍'},
+      {label:'Active',val:activeCount,color:'#d97706',bg:'rgba(245,158,11,0.1)',icon:'🔥'},
+      {label:'Closed',val:closedCount,color:'#059669',bg:'rgba(5,150,105,0.1)',icon:'✅'},
+    ].map(s=>`<div class="card stat-card">
+      <div class="stat-icon" style="background:${s.bg}">${s.icon}</div>
+      <div class="stat-value" style="color:${s.color}">${s.val}</div>
+      <div class="stat-label">${s.label}</div>
+    </div>`).join('')}
+  </div>
+
+  <div class="card card-p" style="margin-bottom:20px">
+    <div class="section-header">
+      <div class="section-title">Add Prospect</div>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
+      <div style="flex:2;min-width:150px"><label class="form-label">Business Name *</label><input class="form-input" id="pp-biz" placeholder="Tony's Barbershop"/></div>
+      <div style="flex:1;min-width:130px"><label class="form-label">Owner Name</label><input class="form-input" id="pp-owner" placeholder="Tony Rivera"/></div>
+      <div style="flex:1;min-width:110px"><label class="form-label">Phone</label><input class="form-input" id="pp-phone" placeholder="212-555-0100"/></div>
+      <div style="flex:1;min-width:120px"><label class="form-label">Neighborhood</label><input class="form-input" id="pp-hood" placeholder="Midtown, Harlem…"/></div>
+      <div style="flex:1;min-width:130px"><label class="form-label">Business Type</label>
+        <select class="form-select" id="pp-type">
+          <option value="">Select…</option>
+          ${['Hair Salon','Barbershop','Nail Salon','Restaurant','Plumber','Electrician','HVAC','Dentist','Auto Repair','Gym','Chiropractor','Landscaper','Vet','Other'].map(t=>`<option>${t}</option>`).join('')}
+        </select>
+      </div>
+      <div style="flex:1;min-width:120px"><label class="form-label">Stage</label>
+        <select class="form-select" id="pp-stage">
+          ${PSTAGES.map(s=>`<option value="${s.id}">${s.emoji} ${s.id}</option>`).join('')}
+        </select>
+      </div>
+      <div style="flex:3;min-width:180px"><label class="form-label">Notes</label><input class="form-input" id="pp-notes" placeholder="Left voicemail, follow up Tuesday…"/></div>
+      <button class="btn btn-primary" style="height:38px;flex-shrink:0" onclick="addProspect()">+ Add</button>
+    </div>
+  </div>
+
+  <div style="overflow-x:auto;padding-bottom:12px">
+    <div style="display:flex;gap:12px;min-width:fit-content" id="kanban-board">
+      ${PSTAGES.map(stage=>{
+        const group=prospects.filter(p=>p.stage===stage.id);
+        return `<div
+          class="kanban-col"
+          data-stage="${stage.id}"
+          ondragover="event.preventDefault();this.style.background='rgba(99,102,241,0.06)'"
+          ondragleave="this.style.background=''"
+          ondrop="dropProspect(event,'${stage.id}')"
+          style="width:185px;min-height:420px;background:rgba(248,249,252,0.9);border-radius:14px;padding:12px 10px;border:1.5px solid rgba(99,102,241,0.08);flex-shrink:0;transition:background 0.15s"
+        >
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+            <div style="display:flex;align-items:center;gap:5px">
+              <span style="font-size:14px">${stage.emoji}</span>
+              <span style="font-weight:700;font-size:12px;color:${stage.color}">${stage.id}</span>
+            </div>
+            <span style="font-size:11px;font-weight:700;background:${stage.bg};color:${stage.color};border-radius:99px;padding:2px 8px">${group.length}</span>
+          </div>
+          <div id="col-${stage.id}">
+            ${group.map(p=>prospectCard(p)).join('')}
+            ${group.length===0?`<div style="font-size:11px;color:rgba(155,170,200,0.5);text-align:center;padding:20px 0;font-style:italic">Drop here</div>`:''}
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+  </div>`;
+}
+
+function prospectCard(p){
+  const stage=PSTAGES.find(s=>s.id===p.stage)||PSTAGES[0];
+  return `<div
+    class="kanban-card"
+    draggable="true"
+    data-id="${p.id}"
+    ondragstart="dragProspect(event,'${p.id}')"
+    ondragend="this.style.opacity='1'"
+    style="background:white;border-radius:10px;padding:12px;margin-bottom:8px;border:1px solid rgba(99,102,241,0.1);box-shadow:0 1px 4px rgba(0,0,0,0.05);cursor:grab;user-select:none"
+    onmouseenter="this.style.boxShadow='0 4px 14px rgba(99,102,241,0.15)';this.style.borderColor='#a5b4fc'"
+    onmouseleave="this.style.boxShadow='0 1px 4px rgba(0,0,0,0.05)';this.style.borderColor='rgba(99,102,241,0.1)'"
+  >
+    <div style="font-weight:700;font-size:13px;color:#0f1117;margin-bottom:2px;line-height:1.3">${p.business_name}</div>
+    ${p.owner_name?`<div style="font-size:11px;color:#9aaac8;margin-bottom:4px">${p.owner_name}</div>`:''}
+    ${p.business_type?`<div style="font-size:10px;font-weight:600;color:#6b7fa8;background:rgba(99,102,241,0.06);border-radius:5px;padding:2px 6px;display:inline-block;margin-bottom:4px">${p.business_type}</div>`:''}
+    ${p.neighborhood?`<div style="font-size:11px;color:#9aaac8">📍 ${p.neighborhood}</div>`:''}
+    ${p.phone?`<div style="font-size:11px;color:#6b7fa8;margin-top:2px">📱 ${p.phone}</div>`:''}
+    ${p.notes?`<div style="font-size:11px;color:#9aaac8;margin-top:6px;font-style:italic;line-height:1.4;border-top:1px solid rgba(99,102,241,0.07);padding-top:6px">${p.notes.length>60?p.notes.slice(0,60)+'…':p.notes}</div>`:''}
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:6px;border-top:1px solid rgba(99,102,241,0.07)">
+      <select onchange="moveProspect('${p.id}',this.value)" onclick="event.stopPropagation()" style="font-size:10px;font-weight:700;border-radius:99px;padding:2px 6px;border:1px solid rgba(99,102,241,0.12);background:${stage.bg};color:${stage.color};cursor:pointer;outline:none">
+        ${PSTAGES.map(s=>`<option value="${s.id}" ${s.id===p.stage?'selected':''}>${s.emoji} ${s.id}</option>`).join('')}
+      </select>
+      <button onclick="deleteProspectCard('${p.id}')" style="font-size:11px;padding:3px 8px;border-radius:6px;border:none;background:rgba(239,68,68,0.07);color:#ef4444;cursor:pointer;font-weight:600">✕</button>
+    </div>
+  </div>`;
+}
+
+window.dragProspect = function(e, id){
+  e.dataTransfer.setData('prospectId', id);
+  e.target.style.opacity='0.5';
+};
+
+window.dropProspect = function(e, stage){
+  e.preventDefault();
+  e.currentTarget.style.background='';
+  const id=e.dataTransfer.getData('prospectId');
+  if(id) moveProspect(id, stage);
+};
+
+window.moveProspect = function(id, stage){
+  const prospects=getProspects();
+  const idx=prospects.findIndex(p=>p.id===id);
+  if(idx>-1){ prospects[idx].stage=stage; saveProspectsDB(prospects); }
+  renderProspectPipeline(document.getElementById('prospect-content'));
+};
+
+window.addProspect = function(){
+  const biz=document.getElementById('pp-biz').value.trim();
+  if(!biz){ toast('Business name required','error'); return; }
+  const prospects=getProspects();
+  prospects.push({
+    id:'p'+Date.now(),
+    business_name:biz,
+    owner_name:document.getElementById('pp-owner').value.trim(),
+    phone:document.getElementById('pp-phone').value.trim(),
+    neighborhood:document.getElementById('pp-hood').value.trim(),
+    business_type:document.getElementById('pp-type').value,
+    stage:document.getElementById('pp-stage').value||'Found',
+    notes:document.getElementById('pp-notes').value.trim(),
+    created:Date.now()
+  });
+  saveProspectsDB(prospects);
+  toast('Prospect added ✅');
+  renderProspectPipeline(document.getElementById('prospect-content'));
+};
+
+window.deleteProspectCard = function(id){
+  const prospects=getProspects().filter(p=>p.id!==id);
+  saveProspectsDB(prospects);
+  renderProspectPipeline(document.getElementById('prospect-content'));
+};
 
 function renderCallTracker(c){
   const calls=JSON.parse(localStorage.getItem('call_log')||'[]');
