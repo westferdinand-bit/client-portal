@@ -1686,30 +1686,27 @@ function renderProspectPipeline(c){
 }
 
 function prospectCard(p){
-  const stage=PSTAGES.find(s=>s.id===p.stage)||PSTAGES[0];
-  return `<div
-    class="kanban-card"
-    draggable="true"
-    data-id="${p.id}"
-    ondragstart="dragProspect(event,'${p.id}')"
-    ondragend="this.style.opacity='1'"
-    style="background:white;border-radius:10px;padding:12px;margin-bottom:8px;border:1px solid rgba(99,102,241,0.1);box-shadow:0 1px 4px rgba(0,0,0,0.05);cursor:grab;user-select:none"
-    onmouseenter="this.style.boxShadow='0 4px 14px rgba(99,102,241,0.15)';this.style.borderColor='#a5b4fc'"
-    onmouseleave="this.style.boxShadow='0 1px 4px rgba(0,0,0,0.05)';this.style.borderColor='rgba(99,102,241,0.1)'"
-  >
-    <div style="font-weight:700;font-size:13px;color:#0f1117;margin-bottom:2px;line-height:1.3">${p.business_name}</div>
-    ${p.owner_name?`<div style="font-size:11px;color:#9aaac8;margin-bottom:4px">${p.owner_name}</div>`:''}
-    ${p.business_type?`<div style="font-size:10px;font-weight:600;color:#6b7fa8;background:rgba(99,102,241,0.06);border-radius:5px;padding:2px 6px;display:inline-block;margin-bottom:4px">${p.business_type}</div>`:''}
-    ${p.neighborhood?`<div style="font-size:11px;color:#9aaac8">📍 ${p.neighborhood}</div>`:''}
-    ${p.phone?`<div style="font-size:11px;color:#6b7fa8;margin-top:2px">📱 ${p.phone}</div>`:''}
-    ${p.notes?`<div style="font-size:11px;color:#9aaac8;margin-top:6px;font-style:italic;line-height:1.4;border-top:1px solid rgba(99,102,241,0.07);padding-top:6px">${p.notes.length>60?p.notes.slice(0,60)+'…':p.notes}</div>`:''}
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:6px;border-top:1px solid rgba(99,102,241,0.07)">
-      <select onchange="moveProspect('${p.id}',this.value)" onclick="event.stopPropagation()" style="font-size:10px;font-weight:700;border-radius:99px;padding:2px 6px;border:1px solid rgba(99,102,241,0.12);background:${stage.bg};color:${stage.color};cursor:pointer;outline:none">
-        ${PSTAGES.map(s=>`<option value="${s.id}" ${s.id===p.stage?'selected':''}>${s.emoji} ${s.id}</option>`).join('')}
-      </select>
-      <button onclick="deleteProspectCard('${p.id}')" style="font-size:11px;padding:3px 8px;border-radius:6px;border:none;background:rgba(239,68,68,0.07);color:#ef4444;cursor:pointer;font-weight:600">✕</button>
-    </div>
-  </div>`;
+  var stage=PSTAGES.find(function(s){return s.id===p.stage;})||PSTAGES[0];
+  var ownerHtml=p.owner_name?'<div style="font-size:11px;color:#9aaac8;margin-bottom:4px">'+p.owner_name+'</div>':'';
+  var typeHtml=p.business_type?'<div style="font-size:10px;font-weight:600;color:#6b7fa8;background:rgba(99,102,241,0.06);border-radius:5px;padding:2px 6px;display:inline-block;margin-bottom:4px">'+p.business_type+'</div>':'';
+  var hoodHtml=p.neighborhood?'<div style="font-size:11px;color:#9aaac8">&#128205; '+p.neighborhood+'</div>':'';
+  var phoneHtml=p.phone?'<div style="font-size:11px;color:#6b7fa8;margin-top:2px">&#128241; '+p.phone+'</div>':'';
+  var notesTxt=p.notes?(p.notes.length>60?p.notes.slice(0,60)+'…':p.notes):'';
+  var notesHtml=notesTxt?'<div style="font-size:11px;color:#9aaac8;margin-top:6px;font-style:italic;line-height:1.4;border-top:1px solid rgba(99,102,241,0.07);padding-top:6px">'+notesTxt+'</div>':'';
+  var optionsHtml=PSTAGES.map(function(s){return '<option value="'+s.id+'"'+(s.id===p.stage?' selected':'')+'>'+s.emoji+' '+s.id+'</option>';}).join('');
+  return '<div class="kanban-card" draggable="true" data-id="'+p.id+'"'
+    +' ondragstart="dragProspect(event,\''+p.id+'\');"'
+    +' ondragend="this.style.opacity=\'1\';"'
+    +' style="background:white;border-radius:10px;padding:12px;margin-bottom:8px;border:1px solid rgba(99,102,241,0.1);box-shadow:0 1px 4px rgba(0,0,0,0.05);cursor:grab;user-select:none"'
+    +' onmouseenter="this.style.boxShadow=\'0 4px 14px rgba(99,102,241,0.15)\';this.style.borderColor=\'#a5b4fc\'"'
+    +' onmouseleave="this.style.boxShadow=\'0 1px 4px rgba(0,0,0,0.05)\';this.style.borderColor=\'rgba(99,102,241,0.1)\'"'
+    +'>'
+    +'<div style="font-weight:700;font-size:13px;color:#0f1117;margin-bottom:2px;line-height:1.3">'+p.business_name+'</div>'
+    +ownerHtml+typeHtml+hoodHtml+phoneHtml+notesHtml
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:6px;border-top:1px solid rgba(99,102,241,0.07)">'
+    +'<select onchange="moveProspect(\''+p.id+'\',this.value)" onclick="event.stopPropagation()" style="font-size:10px;font-weight:700;border-radius:99px;padding:2px 6px;border:1px solid rgba(99,102,241,0.12);background:'+stage.bg+';color:'+stage.color+';cursor:pointer;outline:none">'+optionsHtml+'</select>'
+    +'<button onclick="deleteProspectCard(\''+p.id+'\')" style="font-size:11px;padding:3px 8px;border-radius:6px;border:none;background:rgba(239,68,68,0.07);color:#ef4444;cursor:pointer;font-weight:600">&#10005;</button>'
+    +'</div></div>';
 }
 
 window.dragProspect = function(e, id){
