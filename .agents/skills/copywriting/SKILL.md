@@ -198,22 +198,52 @@ Examples:
 
 ## Voice and Tone
 
-Before writing, establish:
+This is the brand voice, not a menu. Write every piece of copy this way unless the user overrides it for a specific project.
 
-**Formality level:**
-- Casual/conversational
-- Professional but friendly
-- Formal/enterprise
+### Never use em dashes
 
-**Brand personality:**
-- Playful or serious?
-- Bold or understated?
-- Technical or accessible?
+No em dashes in the copy. When a sentence needs a break, pick the punctuation that does the actual job:
 
-Maintain consistency, but adjust intensity:
-- Headlines can be bolder
-- Body copy should be clearer
-- CTAs should be action-oriented
+- Two complete thoughts: use a period. "It works. Most tools don't."
+- Soft pause or aside: use a comma. "It works, most of the time."
+- Setup and payoff: use a colon. "One reason it works: nobody has to log in."
+- True aside you could delete: use parentheses. "It works (usually)."
+
+Default to splitting the sentence in two before reaching for any dash. Hyphens in compound words are fine.
+
+### Warm but direct
+
+Warm means it reads like a person talking to them. Direct means the point lands in the first sentence. Both at once, never one at the expense of the other:
+
+- Warm without direct is padding. "We're so excited to finally share something we've been working on for months..." Cut it.
+- Direct without warm is a spec sheet. "Reduces reporting time by 78%." True, and nobody feels it.
+- Both: "Reporting used to eat your Sunday. Now it takes fifteen minutes."
+
+What follows from it:
+
+- Second person. "You," never "users," "customers," or "folks."
+- Contractions always. "You'll," "it's," "doesn't."
+- Say the hard thing plainly, then earn trust with honesty instead of hedging. "This won't work if you post twice a year" beats "results may vary based on posting frequency."
+- No exclamation points. Warmth comes from what you say, not from punctuation.
+- Cut the throat-clearing. Delete the first sentence of the draft and check whether it still works. It usually does.
+
+### Writing for solo creators
+
+The reader runs the whole operation themselves. No team, no budget, nobody to delegate to.
+
+- Never write "your team," "your organization," "stakeholders," or "roll this out." There is no team.
+- Time is the scarce resource, not money. Frame value as hours back, not efficiency gains.
+- Assume they're reading between two other tasks. Short paragraphs, one idea each.
+- Respect what they already know. Explain the unfamiliar, don't over-explain the basics.
+- Never imply they should be further along than they are. No "you should already have..." framing.
+
+### Intensity by placement
+
+Same voice throughout, adjusted for where the copy sits:
+
+- Headlines: boldest and most specific
+- Body copy: clearest and most patient
+- CTAs: plainest verb, no cleverness
 
 ---
 
