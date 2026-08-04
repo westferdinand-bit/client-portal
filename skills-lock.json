@@ -55,6 +55,13 @@
       "skillPath": "skills/brandkit/SKILL.md",
       "computedHash": "b63012f3c3d21197e0185d3e9cc7ec40c589fb10e0b5a32a561739de31aa3f20"
     },
+    "brief": {
+      "source": "anthropics/knowledge-work-plugins",
+      "ref": "main",
+      "sourceType": "github",
+      "skillPath": "legal/skills/brief/SKILL.md",
+      "computedHash": "32587b75e2c39e3021d9bcc2e06e4e521c62af07a5827a84aa9c3d9c61ba693d"
+    },
     "churn-prevention": {
       "source": "coreyhaines31/marketingskills",
       "sourceType": "github",
@@ -90,6 +97,13 @@
       "sourceType": "github",
       "skillPath": "skills/competitors/SKILL.md",
       "computedHash": "6380b59f188f71552e4ea878f41518c387490d583c457f95c4d0f4161ccb7c71"
+    },
+    "compliance-check": {
+      "source": "anthropics/knowledge-work-plugins",
+      "ref": "main",
+      "sourceType": "github",
+      "skillPath": "legal/skills/compliance-check/SKILL.md",
+      "computedHash": "50e71fe4c80639e4f7815d9f10cf8e677a1a30c82bdd68db2b071f2ab2f0e655"
     },
     "content-matrix": {
       "source": "charlie947/social-media-skills",
@@ -247,6 +261,20 @@
       "skillPath": "skills/lead-magnets/SKILL.md",
       "computedHash": "268c83c38cc49d3e437042f5d4e3c31b822deb6012b9d5d7a1370ae500058018"
     },
+    "legal-response": {
+      "source": "anthropics/knowledge-work-plugins",
+      "ref": "main",
+      "sourceType": "github",
+      "skillPath": "legal/skills/legal-response/SKILL.md",
+      "computedHash": "76c9c592acf53d8d9ec6d870acb4a886f8cf2f30f9181f9ad64ae81c967d87aa"
+    },
+    "legal-risk-assessment": {
+      "source": "anthropics/knowledge-work-plugins",
+      "ref": "main",
+      "sourceType": "github",
+      "skillPath": "legal/skills/legal-risk-assessment/SKILL.md",
+      "computedHash": "fbc4dffe38a8b8d59ccee1d016654497dc1d9f2f4ceb5ca632dcb4715d22c07f"
+    },
     "marketing-council": {
       "source": "coreyhaines31/marketingskills",
       "sourceType": "github",
@@ -276,6 +304,13 @@
       "sourceType": "github",
       "skillPath": "skills/marketing-psychology/SKILL.md",
       "computedHash": "50d735eb0f5c36f379ed2200f21aeacc9b9ad85667b5d33ec6111857352a1340"
+    },
+    "meeting-briefing": {
+      "source": "anthropics/knowledge-work-plugins",
+      "ref": "main",
+      "sourceType": "github",
+      "skillPath": "legal/skills/meeting-briefing/SKILL.md",
+      "computedHash": "be14297008437408fc23e249da0e3c80373f0db38abbd66623e64485177352f7"
     },
     "minimalist-ui": {
       "source": "Leonxlnx/taste-skill",
@@ -403,6 +438,13 @@
       "skillPath": "skills/referrals/SKILL.md",
       "computedHash": "1b9228f8c74abd2ad43f72baf34e7de1727dc56fba8ed8a54588bec181c39c97"
     },
+    "review-contract": {
+      "source": "anthropics/knowledge-work-plugins",
+      "ref": "main",
+      "sourceType": "github",
+      "skillPath": "legal/skills/review-contract/SKILL.md",
+      "computedHash": "af4605b5ed7607547961c6965a8d6b0d23759d33e253dee5ceabb11a1b559080"
+    },
     "revops": {
       "source": "coreyhaines31/marketingskills",
       "sourceType": "github",
@@ -426,6 +468,13 @@
       "sourceType": "github",
       "skillPath": "skills/seo-audit/SKILL.md",
       "computedHash": "f2dc52130189068981f21e1c0bdc4471ac7cd9b08d8a1320604411aa0f950385"
+    },
+    "signature-request": {
+      "source": "anthropics/knowledge-work-plugins",
+      "ref": "main",
+      "sourceType": "github",
+      "skillPath": "legal/skills/signature-request/SKILL.md",
+      "computedHash": "eeb88a3eb3363077931c275d709339b70911abbb5f4bc9188ed264647d7ef52d"
     },
     "signup": {
       "source": "coreyhaines31/marketingskills",
@@ -456,6 +505,20 @@
       "sourceType": "github",
       "skillPath": "skills/stitch-skill/SKILL.md",
       "computedHash": "13322f38406cd3abf16ba45e35bdc9b18002d0153a79b4612b97aefc65d5a335"
+    },
+    "triage-nda": {
+      "source": "anthropics/knowledge-work-plugins",
+      "ref": "main",
+      "sourceType": "github",
+      "skillPath": "legal/skills/triage-nda/SKILL.md",
+      "computedHash": "35d04506fd26639d9507e3790f52366a4dd62eed23bf48d98cd3c717e62f192c"
+    },
+    "vendor-check": {
+      "source": "anthropics/knowledge-work-plugins",
+      "ref": "main",
+      "sourceType": "github",
+      "skillPath": "legal/skills/vendor-check/SKILL.md",
+      "computedHash": "fdae09afea27da1a3b29a77ee811ea5e8dbdc3d0e8593b0ab883e635927860d7"
     },
     "video": {
       "source": "coreyhaines31/marketingskills",
