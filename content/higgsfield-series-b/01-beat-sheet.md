@@ -1,72 +1,75 @@
 # Higgsfield Series B — 45s Vertical Cartoon Explainer
 **Format:** 9:16, 45 seconds · **Style:** Pixar-style 3D, side-scrolling platformer world
-**Narrator:** Hank (mascot) · **Angle:** What this means for you · **CTA:** Follow for more
-**Voice source:** fw-tiktok-reels-hook-framework (Ferdinand West, "AI Made Simple")
+**Narrator:** Pip (original cartoon creature) · **Angle:** AI-space awareness · **CTA:** Follow
 
 ---
 
 ## The one idea
-Big-budget ad quality just became available to a two-truck shop. Everything else is
-supporting evidence.
+AI video generation just crossed from novelty to infrastructure — and the revenue mix is
+the proof. That's the single thing the viewer should walk away knowing.
 
-## Hook (contrarian claim — "you" forward)
-> **"You can use the same tool 390 of the Fortune 500 use."**
+No business-vertical framing. No "here's how to use it for your company." This is a
+heads-up about where the AI space actually is right now.
 
-Alternates if the primary tests flat:
-- Mistake warning: *"You're paying agency prices for something the Fortune 500 just automated."*
-- List tease: *"Two numbers explain why your ad budget is about to get cheaper."*
+## Hook (contrarian, "you" forward)
+> **"If you think the AI boom is cooling off, look at this number."**
+
+Alternates:
+- *"A company you've probably never heard of just did something no company has done this fast."*
+- *"Two numbers tell you exactly where AI is right now."*
 
 ---
 
 ## Beat sheet
 
 ### BEAT 1 — HOOK · 0:00–0:04
-**Visual:** Cold open on Hank mid-stride, side-on, running right across a sunlit
-platformer world. Retro HUD in the corner. Level banner drops: `LEVEL 1 — YOUR BUSINESS`.
-**On-screen text (6 words):** `390 of the Fortune 500 use this`
-**VO:** "You can use the same tool 390 of the Fortune 500 use."
-**Note:** First frame must read in motion — Hank already running, not standing still.
+**Visual:** Cold open, Pip already mid-run, side-on, sprinting right across a bright
+platformer world. Retro HUD in the corner. Level banner drops: `THE AI BOOM`.
+**On-screen text:** `Still think AI is cooling off?`
+**VO:** "If you think the AI boom is cooling off, look at this number."
+**Note:** First frame must read in motion — Pip already running, never standing still.
 
-### BEAT 2 — THE NUMBER · 0:04–0:16
-**Visual:** Hank jumps onto a short green platform stamped `$20M`. Beat of silence.
-Camera pulls back fast and keeps pulling — revealing a colossal platform far above,
-stamped `$700M`. Hank looks up. Hard hat falls off.
+### BEAT 2 — THE JUMP · 0:04–0:18
+**Visual:** Pip lands on a short platform stamped `$20M`. Beat of stillness. Then the
+camera pulls back fast and keeps pulling, revealing a colossal tower far above stamped
+`$700M`. Pip looks straight up. His antenna orb flares.
 **On-screen text:** `$20M → $700M · 12 months`
-**VO:** "A company called Higgsfield just raised four hundred million dollars. Here's the
-part that matters. A year ago it made twenty million. Now it's at seven hundred million
-a year."
+**VO:** "Higgsfield just raised four hundred million dollars. A year ago it made twenty
+million. Today it's at seven hundred million a year. That's thirty-five times, in twelve
+months."
 
-### BEAT 3 — THE FLIP · 0:16–0:24
-**Visual:** Hank runs right past a queue of stiff, grey-suited corporate NPCs lined up
-outside a shop. They're all buying. Sign above the door flips from `TOY` to `TOOL`.
-**On-screen text:** `Most of that money is businesses now`
-**VO:** "And most of that money now comes from businesses, not hobbyists. That's the tell."
+### BEAT 3 — THE SCALE · 0:18–0:24
+**Visual:** Coin-shower cascade. A HUD counter spins up to `30,000,000`. Pip's arms full.
+**On-screen text:** `30M users · 200 countries`
+**VO:** "Thirty million people use it. And here's the part that actually matters —"
 
-### BEAT 4 — WHAT IT MEANS FOR YOU · 0:24–0:38
-**Visual:** Hank grabs a glowing floating power-up. Flash. His crumpled, hand-drawn
-flyer transforms into a polished, glossy ad. Split beat: on the left of frame a national
-brand's billboard, on the right Hank's truck — the ads now look identical.
-**On-screen text:** `Same tools. Different budgets.`
-**VO:** "Making ad-quality video stopped being a big-budget thing. So the HVAC company
-with two trucks and the national brand with a creative agency? Same tools now."
+### BEAT 4 — THE CROSSING · 0:24–0:38
+**Visual:** Pip runs right and crosses a visible line in the ground. Behind him the world
+is bright arcade plastic, labelled `TOY`. Ahead it turns into solid steel-and-concrete
+infrastructure, labelled `TOOL`. Grey corporate NPC silhouettes are already working there.
+A counter ticks to `390`.
+**On-screen text:** `390 of the Fortune 500`
+**VO:** "Three hundred ninety of the Fortune Five Hundred are on it, and businesses now
+make up most of the revenue. That's the line between a toy and a tool."
 
 ### BEAT 5 — CTA · 0:38–0:45
-**Visual:** Hank plants a flag at the top of the level. `LEVEL COMPLETE` card. He turns
-and points at camera.
-**On-screen text:** `Follow — AI Made Simple`
-**VO:** "The only difference left is who actually uses them. Follow — I'll show you the
-simple version. No tech background needed."
+**Visual:** Pip plants a flag on the far side of the line. `LEVEL COMPLETE` card. He turns
+and points at camera, antenna glowing.
+**On-screen text:** `Follow for more`
+**VO:** "AI video just crossed it. Follow — I'll keep you ahead of this stuff."
 
 ---
 
 ## Runtime check
-~104 words at conversational-punchy pace (≈2.4 wps) = **43 seconds.** ~2s of headroom.
-If VO runs long, cut "Here's the part that matters." first — it's the only line doing no work.
+~95 words. Spoken numbers eat more time than their word count suggests, so budget ≈2.2 wps
+= **43 seconds.** If it runs long, cut "That's thirty-five times, in twelve months" — the
+visual already says it.
 
 ## Audio
-- Music: upbeat 8-bit/orchestral hybrid, no lyrics.
-- SFX per beat: jump (B2), coin pickup (B3), power-up chime (B4), level-complete fanfare (B5).
-- Mix VO 6dB above bed. Beat 2's camera pull needs a rising whoosh or it lands flat.
+- Music: upbeat 8-bit / orchestral hybrid, no lyrics.
+- SFX: jump (B2), rising whoosh under the camera pull (B2 — it lands flat without one),
+  coin cascade (B3), a low bass thud as Pip crosses the line (B4), level-complete fanfare (B5).
+- Mix VO 6dB above bed.
 
 ## Sourcing
 All figures from the 17 Aug 2026 Higgsfield Series B release, verified across TechCrunch,
