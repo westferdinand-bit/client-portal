@@ -37,6 +37,19 @@ Both are load-bearing — do not let the music fill them.
 - **0:17–0:18**, the tiny gap before "Thirty million people use it," so the $700M reveal
   has somewhere to land.
 
+## RENDERED — Bram, take 1
+Job `1379ff85-cd87-4762-89f1-6deef9e26da6` · seed_audio · voice Bram (preset,
+`549ff70a-3ee7-4f04-a4d9-89a24fab7709`) · WAV 24kHz · **44.78 seconds**.
+
+That is a fit for the 45-second slot with **0.2s to spare** — technically passing, practically
+too tight. There is no room to top-and-tail it, and the four-second silence specced at
+0:34-0:38 almost certainly is not in this take, because the read is near-continuous.
+
+**Recommended: re-render without line 5.** Dropping "That's thirty-five times, in twelve
+months" takes roughly 3 seconds off, landing near 41-42s, which gives the crossing silence
+somewhere to live and leaves handles at both ends. It is also the only line that repeats
+information the 2A-to-2B scale jump already delivers visually.
+
 ## If it runs long
 Cut line 5 first ("That's thirty-five times, in twelve months") — the 2A→2B scale jump
 already says it, and it's the only line that repeats a visual. Cut line 6 second.

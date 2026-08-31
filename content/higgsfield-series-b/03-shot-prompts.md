@@ -226,4 +226,10 @@ Fix in the prompt: put the line in the immediate foreground running across the f
 the frame, with plastic on one side and stone on the other visible in the same shot; push the
 camera lower and the buildings taller; kill the neon in the background.
 
-4 credits to re-roll. Everything else is ready to animate.
+**Re-rolled:** job `a7c28a17-efba-4db1-a085-44fb2f0e4793` replaces the original 4B
+(`3d5814eb-c3eb-4fd1-ac3e-37a9a795bd65`). The new prompt puts the dividing line hard across
+the immediate foreground with plastic on one side and stone on the other in the same shot,
+drops the camera to sidewalk level so the stone towers overwhelm, and strips every trace of
+neon from the right-hand side.
+
+Everything else is ready to animate.
