@@ -66,3 +66,29 @@ no background objects, no text, no labels, no watermark, no logos, no frame bord
 captions
 
 **Job:** `c0ace8a8-44a5-4d84-a9bc-34663498b2d5` · 4 credits
+
+---
+
+## World style frames — cartoon New York City
+
+Two 9:16 style frames of the Beat 2 moment (Pip on a `$20M` brownstone stoop, dwarfed by
+the `$700M` skyscraper). Pip's design is unchanged from the sheet above — only the world
+around him is new.
+
+- `d722cae9-dca1-4ccb-8af3-afeaf2a2821d` — 4 credits
+- `1292b3eb-e64d-4b83-adfd-8a6e894828d4` — 4 credits
+
+**World prompt block** (reuse verbatim in every shot prompt, swapping only the staging):
+
+> stylized 3D animated side-scrolling platformer video game set in a cartoon New York City,
+> Pixar-style feature animation look, high-end 3D animation studio quality, stylized cartoon
+> brownstone row houses with stone stoops and black iron railings, yellow taxi cabs, steaming
+> subway grates, hot dog carts, striped bodega awnings, tall street lamps, fire hydrants,
+> pigeons on a wire, warm late-afternoon golden hour sunlight raking between the buildings,
+> long dramatic shadows, soft atmospheric haze, glowing amber windows high above, clean
+> readable character silhouette, gentle depth of field, cinematic game key art staging, all
+> signage and awnings left blank and unlettered, no text, no letters, no numbers, no words,
+> no readable writing, no watermark, no logos, no brand names, no humans, no human faces,
+> no other creatures, no HUD
+
+Total spent so far: **12 credits.**
