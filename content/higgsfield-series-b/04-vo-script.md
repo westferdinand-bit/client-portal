@@ -37,18 +37,40 @@ Both are load-bearing — do not let the music fill them.
 - **0:17–0:18**, the tiny gap before "Thirty million people use it," so the $700M reveal
   has somewhere to land.
 
-## RENDERED — Bram, take 1
-Job `1379ff85-cd87-4762-89f1-6deef9e26da6` · seed_audio · voice Bram (preset,
-`549ff70a-3ee7-4f04-a4d9-89a24fab7709`) · WAV 24kHz · **44.78 seconds**.
+## RENDERED
 
-That is a fit for the 45-second slot with **0.2s to spare** — technically passing, practically
-too tight. There is no room to top-and-tail it, and the four-second silence specced at
-0:34-0:38 almost certainly is not in this take, because the read is near-continuous.
+### Take 1 — WRONG VOICE, discard
+Job `1379ff85-cd87-4762-89f1-6deef9e26da6` · 44.78s. Generated on `seed_audio`, which is **not
+in Bram's supported engine list** (`elevenlabs`, `minimax`, `seed_speech`, `qwen_audio`). The
+call did not fail — seed_audio silently substituted its own internal speaker (`S_vfbPNHP82`)
+and returned no `voice` object at all. That is why it sounded nothing like the preview.
 
-**Recommended: re-render without line 5.** Dropping "That's thirty-five times, in twelve
-months" takes roughly 3 seconds off, landing near 41-42s, which gives the crossing silence
-somewhere to live and leaves handles at both ends. It is also the only line that repeats
-information the 2A-to-2B scale jump already delivers visually.
+**Rule for every future VO on this project:** check the voice's `supported_models` before
+generating, and use `model: "text2speech_v2"` with a `variant` from that list. `seed_audio`
+only honours a voice id when that voice actually supports it; otherwise it substitutes without
+warning.
+
+### Take 2 — Bram via ElevenLabs ✅
+Job `922b8951-799e-4d96-955b-38cdfc06aea9` · MP3 · **36.4 seconds**. Response confirms
+`voice.name: "Bram"`, `model: "elevenlabs"`.
+
+### Take 3 — Bram via MiniMax ✅
+Job `fb72344c-d3cc-43d1-b4c9-5083f0112a40` · MP3 32kHz · **37.76 seconds**. Same voice, second
+engine, for comparison.
+
+## The trim is no longer needed — reverting that recommendation
+The line-5 cut was only ever a fix for take 1's bloated 44.78s. At 36.4s the full script sits
+**8.6 seconds under** the 45s slot, which is exactly the headroom the beat sheet wants:
+
+| | |
+|---|---|
+| Video runtime | 45.0s |
+| Bram / ElevenLabs read | 36.4s |
+| Available silence | **8.6s** |
+
+Spend it as: ~4s for the crossing silence after "toy and a tool", ~1.5s of cold-open air
+before the first line, ~1s before "Thirty million people use it", and ~2s of tail after the
+CTA. Keep line 5. It has room now.
 
 ## If it runs long
 Cut line 5 first ("That's thirty-five times, in twelve months") — the 2A→2B scale jump
