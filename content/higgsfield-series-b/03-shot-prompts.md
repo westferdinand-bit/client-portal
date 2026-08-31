@@ -159,3 +159,30 @@ re-roll. If the jump between them doesn't land, nothing after it matters. Then 4
 pair, since the crossing only works if the two halves feel like the same street. Then 1, 3, 5.
 
 **Cost:** 7 frames × 4 credits = **28 credits.** 20 spent so far.
+
+---
+
+## RENDERED — all seven frames
+
+Generated against locked reference `7f2cf195-a64b-4636-971e-da45e53b3001`. 4 credits each,
+28 total. All 9:16, 3072×5504.
+
+| Frame | Beat | Job ID |
+|---|---|---|
+| 1 — Hook, tracking run | 1 | `0c7343b2-4500-4f8c-aba7-d0a1095eea6c` |
+| 2A — Crane start, stoop | 2 | `802f5949-70f9-4697-a606-86da7daf37b1` |
+| 2B — Crane end, tower | 2 | `3959f958-1910-43e2-a873-0dd42d44661e` |
+| 3 — Subway turnstiles | 3 | `66b760e3-773d-4d53-a0e3-2ea3ebf40aa1` |
+| 4A — Times Square | 4 | `fc59922e-7ff8-4a07-b40d-17496c761641` |
+| 4B — Financial District | 4 | `3d5814eb-c3eb-4fd1-ac3e-37a9a795bd65` |
+| 5 — Rooftop flag, dusk | 5 | `2b7e1a78-2ec3-479c-8440-e9208f0c154e` |
+
+**Check these three pairings before animating anything** — they are what the edit depends on,
+and a re-roll now is far cheaper than after the video passes:
+1. **2A vs 2B** — does Pip look meaningfully *smaller* in 2B? That gap is the $20M→$700M jump.
+2. **1 vs 4A** — is he at the same height in frame in both? The Beat 4 cut should feel like
+   the same camera picking him up again.
+3. **4A vs 4B** — do they read as the same street, one line apart? If they look like two
+   different cities, the crossing means nothing.
+
+Running total: **48 credits.**
