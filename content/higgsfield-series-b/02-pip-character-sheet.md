@@ -1,13 +1,22 @@
 # Pip — Mascot Character Sheet
 
 Original fictional creature. Not human, not humanoid, not based on any existing character
-or property. Built with the Higgsfield `character-sheet` workflow, `3d-stylized` preset
-(Pixar/DreamWorks feel), expression-sheet composition.
+or property.
+
+**Render style: bright modern 3D platformer game art** — the clean, saturated, cel-shaded
+look of a console mascot platformer character render. Toy-like matte surfaces, bold readable
+shapes, playful palette. Explicitly *not* photoreal and *not* cinematic film grading. The
+whole video is a game, so the character has to look like a game asset, not a movie still.
 
 ## Who he is
-A small, round, invented creature — think palm-sized. Curious, easily astonished, quietly
-pleased with himself. He has no job, no industry and no backstory, which is the point: he's
-a reaction vessel. The audience feels what Pip feels about each number on screen.
+A small, round, invented creature — think palm-sized — and a New York kid. Curious, easily
+astonished, cocky about it afterwards. He has no job, no industry and no backstory, which is
+the point: he's a reaction vessel. The audience feels what Pip feels about each number.
+
+The NYC read comes from three accessories and a stance, not from clothing him like a person:
+a charcoal knit beanie with the antenna poking through a hole in the top, chunky oversized
+white high-tops with red laces, and a worn olive canvas courier bag slung crossbody. Chin up,
+hand on hip. Streetwise, not cute.
 
 His antenna orb is the emotional tell — it flares when he's astonished, dims when he's
 unimpressed, glows steady when he's confident. That gives the animation a mood indicator
@@ -20,7 +29,11 @@ that reads at phone size even when his face is small in frame.
 | Color | Matte teal-blue, paler cream-mint oval belly patch, darker teal gradient toward feet |
 | Eyes | Two large wide-set glossy dark eyes, soft muted catchlights |
 | Mouth | Wide simple curved cartoon mouth. No nose. |
-| Antenna | Single slender flexible antenna, small glowing warm amber orb at tip |
+| Antenna | Single slender flexible antenna, glowing warm amber orb at tip, poking up through a hole in the beanie |
+| Beanie | Charcoal grey ribbed knit, folded cuff, pulled snug over the head |
+| Shoes | Chunky oversized white high-tops, thick cream soles, bright red laces |
+| Bag | Small worn olive-green canvas courier bag, crossbody on a frayed strap |
+| Stance | Confident swagger — hand on hip, chin tilted up |
 | Back | Small rounded scalloped crest down the spine |
 | Arms | Short and stubby, rounded three-fingered mitten hands |
 | Legs | Short, oversized rounded flat feet |
@@ -28,7 +41,7 @@ that reads at phone size even when his face is small in frame.
 | Surface | Velvety matte, subsurface scattering, subtle fuzzy silhouette rim |
 
 ## Expressions locked on this sheet
-Calm neutral · wide-eyed astonishment looking up · confident closed-mouth grin ·
+Calm neutral · wide-eyed astonishment looking up · cocky closed-mouth smirk ·
 unimpressed narrow-eyed side-eye · triumphant open-mouth cheer
 
 Mapped to the beats: astonishment carries Beat 2's camera pull, the cheer carries Beat 3's
@@ -65,7 +78,16 @@ sheet, no humans, no human faces, no other characters, no animals, no props, no 
 no background objects, no text, no labels, no watermark, no logos, no frame borders, no
 captions
 
-**Job:** `c0ace8a8-44a5-4d84-a9bc-34663498b2d5` · 4 credits
+**Superseded.** The prompt above produced the base creature but in a cinematic Pixar render
+and with no New York styling. Job `c0ace8a8-44a5-4d84-a9bc-34663498b2d5`, 4 credits.
+
+---
+
+## CURRENT SHEET — NYC Pip, game art style (16:9, 4K)
+
+Jobs `b15d2085-efd3-4357-9b46-ed6d71a5e3e2` and `7f2cf195-a64b-4636-971e-da45e53b3001`,
+4 credits each. Same base creature, now with the beanie / high-tops / courier bag, a
+swaggering stance, and a bright platformer-game render instead of a cinematic one.
 
 ---
 

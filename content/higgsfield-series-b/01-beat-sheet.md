@@ -92,7 +92,8 @@ visual already says it.
 - Mix VO 6dB above bed.
 
 ## Art direction notes
-- Golden hour throughout Beats 1-3; dusk by Beat 5. The light moving is the runtime moving.
+- Bright, saturated platformer-game art throughout — a game level, not a movie. Warm daylight
+  through Beats 1-3, dusk by Beat 5. The light moving is the runtime moving.
 - Blank signage everywhere. No lettering except the deliberate game text (`$20M`, `$700M`,
   `390`, `LEVEL COMPLETE`), which gets added in post, not generated.
 - Pip's design is locked — see `02-pip-character-sheet.md`. The city changes around him;
