@@ -50,11 +50,11 @@ generating, and use `model: "text2speech_v2"` with a `variant` from that list. `
 only honours a voice id when that voice actually supports it; otherwise it substitutes without
 warning.
 
-### Take 2 — Bram via ElevenLabs ✅
+### Take 2 — Bram via ElevenLabs ✅ **LOCKED — this is the VO**
 Job `922b8951-799e-4d96-955b-38cdfc06aea9` · MP3 · **36.4 seconds**. Response confirms
 `voice.name: "Bram"`, `model: "elevenlabs"`.
 
-### Take 3 — Bram via MiniMax ✅
+### Take 3 — Bram via MiniMax (not used)
 Job `fb72344c-d3cc-43d1-b4c9-5083f0112a40` · MP3 32kHz · **37.76 seconds**. Same voice, second
 engine, for comparison.
 
