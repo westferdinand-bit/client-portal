@@ -186,3 +186,44 @@ and a re-roll now is far cheaper than after the video passes:
    different cities, the crossing means nothing.
 
 Running total: **48 credits.**
+
+---
+
+## Review of the rendered frames
+
+Reviewed from screenshots (the CDN blocks direct fetches from the build environment).
+
+**Character consistency: passed.** Teal body, cream belly patch, charcoal beanie, amber
+antenna orb, white high-tops with red laces, olive courier bag — all seven match. Passing the
+locked sheet as a reference did its job.
+
+**Strongest frames — done, no notes:**
+- Frame 3 (subway). Coins arcing out of the turnstiles, arms full, huge open-mouth cheer. Blank
+  departure board landed clean for the `30,000,000` overlay.
+- Frame 5 (rooftop). Blank flag, hand on hip, smirk, water tower and skyline behind. Best frame
+  of the set and the right note to end on.
+
+**Frame 2A → 2B: passed.** The scale gap is real — he's substantial on the stoop in 2A and a
+speck at the bottom of the canyon in 2B. The glowing ledges up the facade read as game
+platforms. It's a brownstone canyon rather than a monolithic tower, but the vertical
+perspective carries it.
+
+**Frame 1 → 4A: passed.** Both side-on running profiles at close enough to the same height that
+the Beat 4 cut will feel like the same camera.
+
+### Needs a re-roll: Frame 4B
+
+Two problems, and they compound:
+
+1. **The line in the sidewalk isn't there.** It's the single most important visual device in
+   the video — the whole toy-to-tool argument is "he crossed a line" — and it didn't render.
+   Without it, 4A and 4B are just two locations, not two sides of one street.
+2. **The architecture isn't overwhelming.** It reads as an ordinary night street corner with
+   some columns, and the neon skyline still glowing behind undercuts the palette drop. It needs
+   to feel heavy, institutional and permanent by contrast with 4A's plastic.
+
+Fix in the prompt: put the line in the immediate foreground running across the full width of
+the frame, with plastic on one side and stone on the other visible in the same shot; push the
+camera lower and the buildings taller; kill the neon in the background.
+
+4 credits to re-roll. Everything else is ready to animate.
