@@ -31,6 +31,20 @@ running it. The fix is `declined_preset_id: "24bae836-2c4a-48e0-89b6-49fcc0b2161
 retry, which suppresses that one recommendation. Declined here because the art direction is
 already locked and a dark moody preset would break it.
 
+## RENDERED — all five complete
+All 2K, 1440x2560, 9:16, no watermark. 96 credits.
+
+| # | Beat | Dur | Output |
+|---|---|---|---|
+| 1 | Hook | 5s | `hf_20260831_235223_8c1396d6-...mp4` |
+| 2 | The jump (crane) | 15s | `hf_20260831_235222_e74f8c82-...mp4` |
+| 3 | Scale (subway) | 6s | `hf_20260831_235245_5125dcf8-...mp4` |
+| 4 | The crossing | 15s | `hf_20260831_235245_7b6b40b5-...mp4` |
+| 5 | CTA (rooftop) | 7s | `hf_20260831_235245_567c3d05-...mp4` |
+
+Clips 2 and 4 both confirm start_image AND end_image were accepted, so the keyframe pairs
+drove the camera as intended rather than the model improvising the move.
+
 ## What to check on the clips
 1. **Clip 2 must be one continuous crane.** If it cuts, whip-pans or resets, the scale reveal
    dies. This is the highest-risk clip in the set.
