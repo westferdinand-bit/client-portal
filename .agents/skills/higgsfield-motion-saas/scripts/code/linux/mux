@@ -1,0 +1,37 @@
+#!/usr/bin/env python3
+# mux <video.mp4> <audio.m4a> <out.mp4> - passthrough H.264 + AAC into one mp4.
+# Linux port of mux.swift (AVFoundation -> ffmpeg). Video is copied untouched; audio is
+# encoded once to AAC-LC 256 kbps / 48 kHz stereo and trimmed to the picture.
+import json, os, subprocess, sys
+
+def die(m):
+    print(f"error: {m}", file=sys.stderr); sys.exit(1)
+
+a = sys.argv[1:]
+if len(a) < 3:
+    die("usage: mux <video.mp4> <audio.m4a> <out.mp4>")
+video, audio, out = a[0], a[1], a[2]
+for p in (video, audio):
+    if not os.path.isfile(p):
+        die(f"file not found: {p}")
+
+probe = subprocess.run(["ffprobe", "-v", "error", "-print_format", "json", "-show_format", video],
+                       capture_output=True, text=True)
+try:
+    dur = float(json.loads(probe.stdout)["format"]["duration"])
+except Exception:
+    die(f"could not read the duration of {video}")
+
+p = subprocess.run([
+    "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+    "-i", video, "-i", audio,
+    "-filter_complex", "[1:a]apad[aout]",
+    "-map", "0:v:0", "-map", "[aout]",
+    "-c:v", "copy", "-c:a", "aac", "-b:a", "256k", "-ar", "48000", "-ac", "2",
+    "-t", f"{dur:.6f}", "-movflags", "+faststart", out,
+], capture_output=True, text=True)
+if p.returncode != 0:
+    die("ffmpeg failed:\n" + "\n".join(p.stderr.strip().splitlines()[-10:]))
+
+print(f"mux  {os.path.basename(video)} (video copied) + {os.path.basename(audio)} -> {out}  "
+      f"({dur:.2f} s, {os.path.getsize(out)/1e6:.1f} MB)")
