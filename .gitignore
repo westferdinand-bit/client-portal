@@ -1,3 +1,4 @@
 dist/
 __pycache__/
 *.pyc
+.agents/skills/higgsfield-motion-saas/scripts/code/bin/

@@ -3,6 +3,12 @@ name: higgsfield-motion-saas
 description: Make smooth, professional SaaS / app / product launch motion — fully code-based (HTML/CSS/Canvas scenes → headless-Chromium capture → sub-frame motion blur → H.264, synthesized sound) or in After Effects via ExtendScript. Covers the whole 15 s launch-film job (concept → storyboard sheet with estimate → engine → render → review → revisions) and a tested library of transitions that hide the cut in peak speed (needle zoom, fly-through, UI morph, mockup hand-off, object carry, grow-from-point, smear, flowing background), overlapping keyframes / parent nulls, inertial-bounce entrances, typing with a caret, a photographed lens pass, motion QA. Use whenever the user wants a launch / promo / teaser / product video, UI animation, smooth transitions, match cuts, easing or speed-graph work, camera moves, or any scripted motion piece in AE or in code, in any language ("моушн лаунч ролик", "full code-based", "плавный переход", "SaaS ролик", "overlap ключей", "камера мувменты") — even if they don't name the skill.
 ---
 
+> **Linux:** the Swift tools and the zsh scripts are macOS-only. Run `bash scripts/setup-linux.sh`
+> once, then use `scripts/code/linux/render_film.sh` and `scripts/code/linux/stills.sh` in place of
+> the zsh originals; `encode`/`mux`/`extract` land in `scripts/code/bin/` under the same names.
+> After Effects (`ae.sh`, `*.jsx`) has no Linux build — use the code pipeline. See
+> `scripts/code/linux/README.md`.
+
 # Higgsfield Motion SaaS: app and launch motion
 
 Two engines, one motion grammar.
