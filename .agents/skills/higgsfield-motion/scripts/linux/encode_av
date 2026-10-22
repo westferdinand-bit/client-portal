@@ -1,0 +1,74 @@
+#!/usr/bin/env python3
+# encode_av - the master encoder: numbered frames + an audio file -> one H.264 + AAC MP4 in a single pass.
+# usage: encode_av <frames_dir> <fps> <audio.wav|.aif|.m4a|.mp3 | -> <out.mp4> [bitrate_mbps=24] [--lenient]
+#   audio   re-encoded to AAC-LC 256 kbps, 48 kHz stereo, trimmed to the picture: film length = frames / fps.
+#           Shorter audio is allowed (silence after it, with a warning). "-" = picture only.
+#   output  H.264 High, BT.709 tags, keyframe every 2 s, constant frame rate.
+# Linux port of encode_av.swift (AVFoundation -> ffmpeg). Same CLI and contract.
+
+import os
+import shutil
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from _hfcommon import (  # noqa: E402
+    AAC_ARGS, collect_frames, die, media_duration, run, sequence_dir, warn, x264_args,
+)
+
+
+def main(argv):
+    args = [a for a in argv if a != "--lenient"]
+    lenient = "--lenient" in argv
+    if len(args) < 4:
+        die("usage: encode_av <frames_dir> <fps> <audio|-> <out.mp4> [bitrate_mbps=24] [--lenient]")
+
+    frames_dir, fps_s, audio, out = args[0], args[1], args[2], args[3]
+    try:
+        fps = float(fps_s)
+        if fps <= 0:
+            raise ValueError
+    except ValueError:
+        die(f"fps must be a positive number, got {fps_s!r}")
+    mbps = float(args[4]) if len(args) > 4 else 24.0
+
+    paths = collect_frames(frames_dir, lenient)
+    film = len(paths) / fps
+
+    if audio != "-":
+        if not os.path.isfile(audio):
+            die(f"audio file not found: {audio}")
+        adur = media_duration(audio)
+        if adur is not None and adur + 1e-3 < film:
+            warn(f"audio is {adur:.2f} s but the picture is {film:.2f} s; "
+                 f"padding {film - adur:.2f} s of silence after it")
+
+    tmp, pattern = sequence_dir(paths)
+    try:
+        cmd = [
+            "ffmpeg", "-hide_banner", "-y",
+            "-framerate", str(fps), "-start_number", "0",
+            "-i", os.path.join(tmp, pattern),
+        ]
+        if audio == "-":
+            cmd += [*x264_args(fps, mbps), "-t", f"{film:.6f}", out]
+        else:
+            # apad then -t trims/pads the audio to exactly the picture length.
+            cmd += [
+                "-i", audio,
+                "-filter_complex", "[1:a]apad[aout]",
+                "-map", "0:v:0", "-map", "[aout]",
+                *x264_args(fps, mbps), *AAC_ARGS,
+                "-t", f"{film:.6f}", out,
+            ]
+        run(cmd)
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+    size_mb = os.path.getsize(out) / 1e6
+    track = "picture only" if audio == "-" else f"+ {os.path.basename(audio)} (AAC-LC 256k/48k stereo)"
+    print(f"encode_av  {len(paths)} frames @ {fps:g} fps {track} -> {out}  "
+          f"({film:.2f} s, {size_mb:.1f} MB)")
+
+
+if __name__ == "__main__":
+    main(sys.argv[1:])

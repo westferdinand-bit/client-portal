@@ -1,0 +1,181 @@
+#!/usr/bin/env python3
+# fdiff - frame-difference scan of the ENCODED film (MP4 / MOV): one-frame glitches, jumps,
+# freezes, dead air, timing. Run it on every version before it is sent: whole-frame luma once said
+# "clean" while 18 local defects existed.
+# usage: fdiff <film.mp4> [--from s] [--to s] [--csv out.csv] [--out dir] [--fail]
+#              [--spike 3] [--ratio 2] [--freeze 6] [--still 0.15] [--dead 8] [--dead-min 0.2]
+# Every decoded frame (presentation order) is reduced to a 384-px-wide grey grid and compared with
+# the previous one:
+#   mad       mean |dluma| over the whole frame (0-255)   -> energy of the change
+#   blockmax  the largest mean |dluma| of any 12x12 block -> LOCAL change (a cursor on a still frame)
+# Linux port of fdiff.swift. Decoding via ffmpeg, the grid maths via Pillow (no numpy needed).
+
+import os
+import subprocess
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from _hfcommon import die, media_duration, parse_rational, stream  # noqa: E402
+
+try:
+    from PIL import Image, ImageChops, ImageStat
+except ImportError:
+    die("fdiff needs Pillow: pip install Pillow")
+
+GRID_W = 384
+BLOCK = 12
+
+
+def main(argv):
+    opts = {"spike": 3.0, "ratio": 2.0, "freeze": 6, "still": 0.15, "dead": 8.0, "dead-min": 0.2}
+    t_from = t_to = None
+    csv_path = out_dir = None
+    fail_mode = False
+    args = []
+    i = 0
+    while i < len(argv):
+        a = argv[i]
+        if a == "--from":
+            t_from = float(argv[i + 1]); i += 2
+        elif a == "--to" or a == "--until":
+            t_to = float(argv[i + 1]); i += 2
+        elif a == "--csv":
+            csv_path = argv[i + 1]; i += 2
+        elif a == "--out":
+            out_dir = argv[i + 1]; i += 2
+        elif a == "--fail":
+            fail_mode = True; i += 1
+        elif a.startswith("--") and a[2:] in opts:
+            opts[a[2:]] = float(argv[i + 1]); i += 2
+        else:
+            args.append(a); i += 1
+
+    if not args:
+        die("usage: fdiff <film.mp4> [--from s] [--to s] [--csv out.csv] [--out dir] [--fail]")
+    film = args[0]
+    if not os.path.isfile(film):
+        die(f"file not found: {film}")
+
+    v = stream(film, "v")
+    if not v:
+        die(f"no video stream in {film}")
+    fps = parse_rational(v.get("avg_frame_rate") or v.get("r_frame_rate"), 0.0)
+    if fps <= 0:
+        die("could not read the frame rate")
+    w, h = int(v["width"]), int(v["height"])
+    gw = GRID_W
+    gh = max(2, int(round(h * gw / w / 2)) * 2)
+
+    cmd = ["ffmpeg", "-hide_banner", "-nostats", "-loglevel", "error"]
+    if t_from is not None:
+        cmd += ["-ss", f"{t_from:.6f}"]
+    if t_to is not None:
+        cmd += ["-to", f"{t_to:.6f}"]
+    cmd += ["-i", film, "-vf", f"scale={gw}:{gh}", "-pix_fmt", "gray",
+            "-f", "rawvideo", "-"]
+
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    size = gw * gh
+    prev = None
+    rows = []  # (index, time, mad, blockmax)
+    idx = 0
+    base = t_from or 0.0
+    while True:
+        buf = proc.stdout.read(size)
+        if len(buf) < size:
+            break
+        cur = Image.frombytes("L", (gw, gh), buf)
+        if prev is not None:
+            diff = ImageChops.difference(cur, prev)
+            mad = ImageStat.Stat(diff).mean[0]
+            blocks = diff.resize((max(1, gw // BLOCK), max(1, gh // BLOCK)), Image.BOX)
+            blockmax = blocks.getextrema()[1]
+            rows.append((idx, base + idx / fps, mad, float(blockmax)))
+        prev = cur
+        idx += 1
+    proc.stdout.close()
+    proc.wait()
+
+    if not rows:
+        die("decoded fewer than two frames; nothing to compare")
+
+    mads = sorted(r[2] for r in rows)
+    median = mads[len(mads) // 2]
+
+    findings = []
+
+    # One-frame spikes: a jump well above both the absolute floor and the local norm.
+    for n, (i_, t, mad, bmax) in enumerate(rows):
+        if mad >= opts["spike"] and (median <= 1e-6 or mad >= median * opts["ratio"]):
+            nxt = rows[n + 1][2] if n + 1 < len(rows) else 0.0
+            if nxt < mad / opts["ratio"]:
+                findings.append((t, "spike", f"mad {mad:.2f} (median {median:.2f}), blockmax {bmax:.1f}"))
+
+    # Local defect on an otherwise still frame: whole-frame luma stays calm, one block does not.
+    for i_, t, mad, bmax in rows:
+        if mad < opts["still"] and bmax >= opts["spike"]:
+            findings.append((t, "local", f"blockmax {bmax:.1f} on a still frame (mad {mad:.2f})"))
+
+    # Freezes: a run of near-identical frames.
+    run_start, run_len = None, 0
+    for i_, t, mad, bmax in rows:
+        if mad < opts["still"]:
+            if run_start is None:
+                run_start = t
+            run_len += 1
+        else:
+            if run_len >= opts["freeze"]:
+                findings.append((run_start, "freeze", f"{run_len} frames ({run_len / fps:.2f} s) below {opts['still']}"))
+            run_start, run_len = None, 0
+    if run_len >= opts["freeze"]:
+        findings.append((run_start, "freeze", f"{run_len} frames ({run_len / fps:.2f} s) below {opts['still']}"))
+
+    # Dead air: a long stretch with almost no change at all.
+    dead_frames = int(opts["dead"] * fps)
+    run_start, run_len = None, 0
+    for i_, t, mad, bmax in rows:
+        if mad < opts["dead-min"]:
+            if run_start is None:
+                run_start = t
+            run_len += 1
+        else:
+            if run_len >= dead_frames:
+                findings.append((run_start, "dead", f"{run_len / fps:.2f} s below {opts['dead-min']}"))
+            run_start, run_len = None, 0
+    if run_len >= dead_frames:
+        findings.append((run_start, "dead", f"{run_len / fps:.2f} s below {opts['dead-min']}"))
+
+    dur = media_duration(film) or (len(rows) + 1) / fps
+    print(f"fdiff    {os.path.basename(film)}  {len(rows) + 1} frames @ {fps:g} fps  "
+          f"{dur:.2f} s  grid {gw}x{gh}")
+    print(f"         mad median {median:.3f}  max {max(r[2] for r in rows):.2f}  "
+          f"blockmax max {max(r[3] for r in rows):.1f}")
+
+    if csv_path:
+        with open(csv_path, "w") as fh:
+            fh.write("frame,time,mad,blockmax\n")
+            for i_, t, mad, bmax in rows:
+                fh.write(f"{i_},{t:.4f},{mad:.4f},{bmax:.2f}\n")
+        print(f"         csv -> {csv_path}")
+
+    if out_dir and findings:
+        os.makedirs(out_dir, exist_ok=True)
+        for t, kind, _ in findings[:40]:
+            dest = os.path.join(out_dir, f"{kind}_{t:.2f}.png")
+            subprocess.run(["ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+                            "-ss", f"{t:.6f}", "-i", film, "-frames:v", "1", dest],
+                           capture_output=True)
+        print(f"         {min(len(findings), 40)} finding frames -> {out_dir}")
+
+    if findings:
+        print(f"\n{len(findings)} finding(s):")
+        for t, kind, detail in sorted(findings):
+            print(f"  {t:7.2f} s  {kind:6}  {detail}")
+        if fail_mode:
+            sys.exit(1)
+    else:
+        print("\nclean    no spikes, local defects, freezes or dead air at these thresholds")
+
+
+if __name__ == "__main__":
+    main(sys.argv[1:])

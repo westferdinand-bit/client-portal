@@ -22,7 +22,8 @@ Turns a brief into **beautiful, coherent key frames and short code-rendered film
 |---|---|
 | `scripts/hf-tokens.js` | **The token system** (~730 KB, no deps; browser `window.HFT`, Node `require`): 12 presets, the Higgsfield brand (+ the user's own tokens.json as `.legacy`), genres, modules, `theme()`, `derive()`, `defineBrand()`, `validate()`, exporters, timing helpers. |
 | `scripts/hf-motion.js` | Deterministic motion helpers driven by the theme's motion personality. |
-| `scripts/setup.sh` | Once per machine: checks Node 22+, browser, swiftc, afconvert; compiles the Swift tools into `${HFT_BIN:-~/.cache/higgsfield-motion/bin}` (`$B` below). |
+| `scripts/setup.sh` | **macOS**, once per machine: checks Node 22+, browser, swiftc, afconvert; compiles the Swift tools into `${HFT_BIN:-~/.cache/higgsfield-motion/bin}` (`$B` below). |
+| `scripts/setup-linux.sh` | **Linux**, once per machine: checks Node 22+, ffmpeg, Pillow, Chromium; installs the ffmpeg-backed ports from `scripts/linux/` into the same `$B` under the same tool names. See `scripts/linux/README.md`. |
 | `render.mjs` · `capture.mjs` · `strip.mjs` · `cdp.mjs` | Stills (size from `<meta name="frame">`; WebGL: `capture.mjs --stills`) · frame-exact capture of `__seek(t)` pages (`--stills --query --size --draft --workers --mb --shutter --check-determinism --lenient`) · strips (`--fps`) · the shared browser launcher. |
 | `encode` · `encode_av` · `mux` · `master` (`.swift`) | Frames → silent H.264; frames + WAV in one pass; MP4 + .m4a mux; loudness master. |
 | `music_window.py` · `cut_audio.py` · `render_audio.mjs` + `assets/templates/audio/score.html` | Supplied track: best window and hits, then the cut. No track: a score / SFX synthesised in code. |
@@ -70,7 +71,7 @@ Search all: `grep -n "^## \|^### " references/parts/*.md | grep -i <topic>`.
    - **No dead air:** something new every 0.5–0.6 s. Stills only as listed reads: status 1.0 s · name + ✓ 0.6–0.7 s · three numbers 1.2 s · list item 0.8 s · end lockup 2 s. [M-05]
    - **Nothing pops:** entries = move + scale 0.96→1 + opacity + blur 8→0 px on an expo-out; exits mirror on a cubic-in; captions and CTAs take ~10 frames. [M-01]
    - **Footage** plays as `<img>` frames via `clips.js` (`"$B"/extract` at native fps); headless Chromium has no H.264. [R-09]
-7. **Capture, sound, encode.** Once per machine: `zsh scripts/setup.sh`.
+7. **Capture, sound, encode.** Once per machine: `zsh scripts/setup.sh` on macOS, or `bash scripts/setup-linux.sh` on Linux. Either way the tools land in `$B` under the same names, so every `"$B"/<tool>` line below is identical on both platforms.
    - **Drafts:** `node scripts/capture.mjs page.html out/frames --draft` (JPEG, 4 workers, no blur: minutes). Number versions; never overwrite a file the user has seen. [P-02, R-06]
    - **Masters:** `--mb 8 --shutter 0.5 --clean` (180° sub-frame blur, ≈20 s of render per film second, a fresh folder). Never fake blur in CSS. [R-01]
    - **Sound is a default step:** no film goes out silent, interims included. [SN-01, R-02]

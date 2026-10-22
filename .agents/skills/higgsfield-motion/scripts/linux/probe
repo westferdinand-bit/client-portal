@@ -1,0 +1,127 @@
+#!/usr/bin/env python3
+# probe - check the ENCODED deliverable before sending it: what the viewer gets, not what the
+# frames folder says.
+# usage: probe <video.mp4> [out_dir [t1 t2 ... | auto]] [--fps N] [--dur S] [--audio]
+#   out_dir writes check frames decoded FROM THE MP4 as <out_dir>/v_<t>.png.
+#   No times or "auto" = six frames: first, 15 %, 30 %, 55 %, 80 %, last.
+#   --fps N / --dur S  assert the nominal rate / duration; a mismatch exits 1.
+#   --audio            fail when the file carries no audio track.
+# Linux port of probe.swift (AVFoundation -> ffprobe/ffmpeg). Same CLI and report.
+
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from _hfcommon import die, ffprobe_json, media_duration, parse_rational, run, stream  # noqa: E402
+
+
+def frame_timing(path):
+    """Decode packet durations to measure the real frame rate and spot a variable one."""
+    out = run([
+        "ffprobe", "-v", "error", "-select_streams", "v:0",
+        "-show_entries", "frame=duration_time,pts_time",
+        "-of", "csv=p=0", path,
+    ])
+    pts = []
+    for line in out.strip().splitlines():
+        parts = [p for p in line.split(",") if p not in ("", "N/A")]
+        for p in parts:
+            try:
+                pts.append(float(p))
+                break
+            except ValueError:
+                continue
+    pts.sort()
+    deltas = [b - a for a, b in zip(pts, pts[1:]) if b > a]
+    return len(pts), deltas
+
+
+def main(argv):
+    want_fps = want_dur = None
+    need_audio = False
+    args = []
+    i = 0
+    while i < len(argv):
+        a = argv[i]
+        if a == "--fps":
+            want_fps = float(argv[i + 1]); i += 2
+        elif a == "--dur":
+            want_dur = float(argv[i + 1]); i += 2
+        elif a == "--audio":
+            need_audio = True; i += 1
+        else:
+            args.append(a); i += 1
+
+    if not args:
+        die("usage: probe <video.mp4> [out_dir [t1 t2 ... | auto]] [--fps N] [--dur S] [--audio]")
+    path = args[0]
+    if not os.path.isfile(path):
+        die(f"file not found: {path}")
+    out_dir = args[1] if len(args) > 1 else None
+    times = args[2:]
+
+    size_mb = os.path.getsize(path) / 1e6
+    duration = media_duration(path) or 0.0
+    v = stream(path, "v")
+    a = stream(path, "a")
+    fmt = ffprobe_json(path, "-show_format").get("format", {})
+
+    print(f"file     {os.path.basename(path)}  {size_mb:.1f} MB  container {duration:.3f} s")
+
+    failures = []
+    if not v:
+        failures.append("no video stream")
+        print("video    none")
+    else:
+        nominal = parse_rational(v.get("r_frame_rate"), 0.0)
+        count, deltas = frame_timing(path)
+        measured = (count / duration) if duration else 0.0
+        bitrate = v.get("bit_rate") or fmt.get("bit_rate")
+        br = f"{int(bitrate) / 1e6:.1f} Mbps" if bitrate else "n/a"
+        print(f"video    {v.get('width')}x{v.get('height')}  {v.get('codec_name')} "
+              f"{v.get('profile', '?')}  nominal {nominal:g} fps  measured {measured:.3f} fps  "
+              f"{count} frames  {br}")
+        if deltas:
+            lo, hi = min(deltas), max(deltas)
+            cfr = "constant" if (hi - lo) < 1e-4 else "VARIABLE"
+            print(f"timing   frame duration min {lo * 1000:.1f} ms  max {hi * 1000:.1f} ms  -> {cfr}")
+            if cfr == "VARIABLE":
+                failures.append(f"variable frame rate (min {lo * 1000:.1f} ms, max {hi * 1000:.1f} ms)")
+        print(f"colour   primaries {v.get('color_primaries', 'unset')}  "
+              f"transfer {v.get('color_transfer', 'unset')}  matrix {v.get('color_space', 'unset')}")
+        if want_fps is not None and abs(nominal - want_fps) > 0.01:
+            failures.append(f"fps {nominal:g} != expected {want_fps:g}")
+
+    if a:
+        abr = f"{int(a['bit_rate']) / 1000:.0f} kbps" if a.get("bit_rate") else "n/a"
+        print(f"audio    {a.get('codec_name')}  {a.get('sample_rate')} Hz  "
+              f"{a.get('channels')} ch  {float(a.get('duration', 0) or 0):.3f} s  {abr}")
+    else:
+        print("audio    none")
+        if need_audio:
+            failures.append("no audio track (--audio)")
+
+    if want_dur is not None and abs(duration - want_dur) > 0.05:
+        failures.append(f"duration {duration:.3f} s != expected {want_dur:g} s")
+
+    if out_dir and v:
+        os.makedirs(out_dir, exist_ok=True)
+        if not times or times == ["auto"]:
+            marks = [0.0, 0.15, 0.30, 0.55, 0.80]
+            picks = [duration * m for m in marks] + [max(0.0, duration - 1e-3)]
+        else:
+            picks = [float(t) for t in times]
+        for t in picks:
+            dest = os.path.join(out_dir, f"v_{t:.2f}.png")
+            run(["ffmpeg", "-hide_banner", "-y", "-ss", f"{t:.6f}", "-i", path,
+                 "-frames:v", "1", dest])
+        print(f"frames   {len(picks)} check frames decoded from the MP4 -> {out_dir}")
+
+    if failures:
+        print("\nFAIL     " + "; ".join(failures), file=sys.stderr)
+        sys.exit(1)
+    print("\nok       deliverable passes the checks run")
+
+
+if __name__ == "__main__":
+    main(sys.argv[1:])

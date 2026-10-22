@@ -1,0 +1,75 @@
+#!/usr/bin/env python3
+# mux - put an audio track on an existing MP4. The video samples are copied untouched (passthrough:
+# no re-encode, colour tags and frame timing kept); the audio is decoded and encoded once to
+# AAC-LC 256 kbps, 48 kHz stereo, and trimmed to the picture.
+# usage: mux <video.mp4> <audio.wav|.m4a|.aif|.mp3> <out.mp4> [--offset s]
+#   --offset positive: the audio starts s seconds into the film (silence before);
+#            negative: skip the first |s| seconds of the audio.
+# Linux port of mux.swift (AVFoundation -> ffmpeg). Same CLI and contract.
+
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from _hfcommon import AAC_ARGS, die, media_duration, run  # noqa: E402
+
+
+def main(argv):
+    offset = 0.0
+    args = []
+    i = 0
+    while i < len(argv):
+        if argv[i] == "--offset":
+            if i + 1 >= len(argv):
+                die("--offset needs a value in seconds")
+            try:
+                offset = float(argv[i + 1])
+            except ValueError:
+                die(f"--offset must be a number, got {argv[i + 1]!r}")
+            i += 2
+        else:
+            args.append(argv[i])
+            i += 1
+
+    if len(args) < 3:
+        die("usage: mux <video.mp4> <audio> <out.mp4> [--offset s]")
+    video, audio, out = args[0], args[1], args[2]
+    for p in (video, audio):
+        if not os.path.isfile(p):
+            die(f"file not found: {p}")
+
+    film = media_duration(video)
+    if film is None:
+        die(f"could not read the duration of {video}")
+
+    # Positive offset delays the audio; negative trims its head. apad then -t covers the picture exactly.
+    if offset > 0:
+        afilter = f"[1:a]adelay={int(round(offset * 1000))}:all=1,apad[aout]"
+        seek = []
+    elif offset < 0:
+        afilter = "[1:a]apad[aout]"
+        seek = ["-ss", f"{abs(offset):.6f}"]
+    else:
+        afilter = "[1:a]apad[aout]"
+        seek = []
+
+    run([
+        "ffmpeg", "-hide_banner", "-y",
+        "-i", video,
+        *seek, "-i", audio,
+        "-filter_complex", afilter,
+        "-map", "0:v:0", "-map", "[aout]",
+        "-c:v", "copy", *AAC_ARGS,
+        "-t", f"{film:.6f}",
+        "-movflags", "+faststart",
+        out,
+    ])
+
+    size_mb = os.path.getsize(out) / 1e6
+    off = f", offset {offset:+g} s" if offset else ""
+    print(f"mux  {os.path.basename(video)} (video copied) + {os.path.basename(audio)}{off} -> {out}  "
+          f"({film:.2f} s, {size_mb:.1f} MB)")
+
+
+if __name__ == "__main__":
+    main(sys.argv[1:])

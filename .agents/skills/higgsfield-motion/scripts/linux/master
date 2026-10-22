@@ -1,0 +1,151 @@
+#!/usr/bin/env python3
+# master - measure a mix and master it to the social-video target: -14 LUFS integrated,
+# true peak <= -1.2 dBTP, 0 clipped samples. You cannot hear the film: these numbers are what you report.
+# usage: master <in.wav|.aif|.m4a|...> [out.wav|out.m4a] [--lufs -14] [--tp -1.2] [--sections a-b,c-d,...]
+#   no out    measure only: integrated loudness, LRA, true peak, sample peak, clipped samples.
+#   out.wav   24-bit PCM at the input rate (feed it to encode_av); out.m4a = AAC-LC 256 kbps (feed it to mux).
+#             An .m4a is decoded again and re-measured, because AAC overshoots.
+#   --sections  loudness of film-time ranges (ungated LUFS), e.g. to prove loudness rises through the build.
+# Linux port of master.swift. ITU-R BS.1770-4 via ffmpeg's loudnorm/ebur128 (same standard AVFoundation used).
+
+import json
+import os
+import re
+import subprocess
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from _hfcommon import die, run, stream  # noqa: E402
+
+
+def loudnorm_measure(path, lufs, tp, start=None, end=None):
+    """First-pass loudnorm: BS.1770-4 integrated, LRA, true peak, threshold."""
+    cmd = ["ffmpeg", "-hide_banner", "-nostats"]
+    if start is not None:
+        cmd += ["-ss", f"{start:.6f}"]
+        if end is not None:
+            cmd += ["-t", f"{max(0.0, end - start):.6f}"]
+    cmd += ["-i", path, "-af",
+            f"loudnorm=I={lufs}:TP={tp}:LRA=11:print_format=json", "-f", "null", "-"]
+    p = subprocess.run(cmd, capture_output=True, text=True)
+    blob = re.findall(r"\{[^{}]*\"input_i\"[^{}]*\}", p.stderr, re.S)
+    if not blob:
+        die(f"loudnorm produced no measurement for {path}")
+    return json.loads(blob[-1])
+
+
+def peak_stats(path):
+    """Sample peak and clipped-sample count from astats."""
+    p = subprocess.run(
+        ["ffmpeg", "-hide_banner", "-nostats", "-i", path,
+         "-af", "astats=measure_overall=Peak_level+Number_of_clipped_samples:measure_perchannel=none",
+         "-f", "null", "-"],
+        capture_output=True, text=True)
+    peak, clipped = None, 0
+    for line in p.stderr.splitlines():
+        if "Peak level dB" in line:
+            try:
+                peak = float(line.split(":")[-1].strip())
+            except ValueError:
+                pass
+        elif "Number of clipped samples" in line:
+            try:
+                clipped = int(line.split(":")[-1].strip())
+            except ValueError:
+                pass
+    return peak, clipped
+
+
+def report(tag, m, peak, clipped):
+    print(f"{tag:9} integrated {float(m['input_i']):7.2f} LUFS   "
+          f"LRA {float(m['input_lra']):5.2f} LU   "
+          f"true peak {float(m['input_tp']):6.2f} dBTP", end="")
+    if peak is not None:
+        print(f"   sample peak {peak:6.2f} dBFS", end="")
+    print(f"   clipped {clipped}")
+
+
+def main(argv):
+    lufs, tp, sections = -14.0, -1.2, None
+    args = []
+    i = 0
+    while i < len(argv):
+        a = argv[i]
+        if a == "--lufs":
+            lufs = float(argv[i + 1]); i += 2
+        elif a == "--tp":
+            tp = float(argv[i + 1]); i += 2
+        elif a == "--sections":
+            sections = argv[i + 1]; i += 2
+        else:
+            args.append(a); i += 1
+
+    if not args:
+        die("usage: master <in> [out.wav|out.m4a] [--lufs -14] [--tp -1.2] [--sections a-b,...]")
+    src = args[0]
+    out = args[1] if len(args) > 1 else None
+    if not os.path.isfile(src):
+        die(f"file not found: {src}")
+
+    m = loudnorm_measure(src, lufs, tp)
+    peak, clipped = peak_stats(src)
+    report("input", m, peak, clipped)
+
+    if sections:
+        for rng in sections.split(","):
+            try:
+                a_s, b_s = rng.split("-")
+                a_f, b_f = float(a_s), float(b_s)
+            except ValueError:
+                die(f"bad --sections range {rng!r}; use a-b,c-d with seconds")
+            sm = loudnorm_measure(src, lufs, tp, a_f, b_f)
+            print(f"  {a_f:6.2f}-{b_f:6.2f} s   {float(sm['input_i']):7.2f} LUFS (ungated)")
+
+    if not out:
+        verdict = []
+        if abs(float(m["input_i"]) - lufs) > 0.5:
+            verdict.append(f"integrated {float(m['input_i']):.2f} is off target {lufs:g}")
+        if float(m["input_tp"]) > tp:
+            verdict.append(f"true peak {float(m['input_tp']):.2f} exceeds {tp:g} dBTP")
+        if clipped:
+            verdict.append(f"{clipped} clipped samples")
+        print("\n" + ("measure only: " + "; ".join(verdict) if verdict
+                      else "measure only: already on target"))
+        return
+
+    a = stream(src, "a")
+    rate = a.get("sample_rate", "48000") if a else "48000"
+    ext = os.path.splitext(out)[1].lower()
+
+    # Second-pass loudnorm, primed with the measured values: linear, deterministic gain.
+    norm = (f"loudnorm=I={lufs}:TP={tp}:LRA=11:"
+            f"measured_I={m['input_i']}:measured_LRA={m['input_lra']}:"
+            f"measured_TP={m['input_tp']}:measured_thresh={m['input_thresh']}:"
+            f"offset={m.get('target_offset', '0.0')}:linear=true:print_format=summary")
+
+    if ext == ".wav":
+        codec = ["-c:a", "pcm_s24le", "-ar", rate]
+    elif ext in (".m4a", ".aac"):
+        codec = ["-c:a", "aac", "-b:a", "256k", "-ar", "48000", "-ac", "2"]
+    else:
+        die(f"output must be .wav or .m4a, got {ext!r}")
+
+    run(["ffmpeg", "-hide_banner", "-y", "-i", src, "-af", norm, *codec, out])
+
+    m2 = loudnorm_measure(out, lufs, tp)
+    peak2, clipped2 = peak_stats(out)
+    report("output", m2, peak2, clipped2)
+
+    problems = []
+    if float(m2["input_tp"]) > tp + 0.1:
+        problems.append(f"true peak {float(m2['input_tp']):.2f} still exceeds {tp:g} dBTP")
+    if clipped2:
+        problems.append(f"{clipped2} clipped samples")
+    if problems:
+        print("\nFAIL     " + "; ".join(problems), file=sys.stderr)
+        sys.exit(1)
+    print(f"\nok       {out} on target ({lufs:g} LUFS, <= {tp:g} dBTP, 0 clipped)")
+
+
+if __name__ == "__main__":
+    main(sys.argv[1:])

@@ -1,0 +1,20 @@
+interface:
+  display_name: "Creative Ads Team"
+  short_description: "Audience research first, then Higgsfield creatives"
+  default_prompt: "Use $create-ads-with-agents to first research my audience, explain the strategy, then generate all new media exclusively through Higgsfield and review it without a separate concept presentation; if I ask for a demo, show a short labeled walkthrough without real generation."
+  icon_small: "./assets/icon.svg"
+  icon_large: "./assets/icon.svg"
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "higgsfield"
+      description: "Required Higgsfield generation connection; authenticate and verify tools in the current host. No alternate generation provider."
+      transport: "streamable_http"
+      url: "https://mcp.higgsfield.ai/mcp"
+policy:
+  products:
+    - "chatgpt"
+    - "codex"
+    - "api"
+    - "atlas"
+  allow_implicit_invocation: true
